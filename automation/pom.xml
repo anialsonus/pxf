@@ -32,7 +32,6 @@
         </repository>
     </repositories>
 
-
     <build>
         <extensions>
             <extension>
@@ -173,6 +172,7 @@
             <artifactId>jsystemCore</artifactId>
             <version>6.1.05</version>
             <exclusions>
+                <!--  javax.comm provides applications access to RS-232 hardware - not needed -->
                 <exclusion>
                     <groupId>javax.comm</groupId>
                     <artifactId>comm</artifactId>
@@ -183,13 +183,13 @@
                 </exclusion>
             </exclusions>
         </dependency>
-
 
         <dependency>
             <groupId>org.jsystemtest.systemobjects</groupId>
             <artifactId>cli</artifactId>
             <version>6.1.05</version>
             <exclusions>
+                <!--  javax.comm provides applications access to RS-232 hardware - not needed -->
                 <exclusion>
                     <groupId>javax.comm</groupId>
                     <artifactId>comm</artifactId>
@@ -200,7 +200,6 @@
                 </exclusion>
             </exclusions>
         </dependency>
-
 
         <dependency>
             <groupId>org.mockito</groupId>

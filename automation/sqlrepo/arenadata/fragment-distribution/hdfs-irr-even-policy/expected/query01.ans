@@ -1,0 +1,19 @@
+-- start_ignore
+-- end_ignore
+-- @description query01 for PXF test to check fragments distribution across segments HDFS profile when fragment count is equal to an even number of segments.
+SELECT * FROM fd_improved_round_robin_even_hdfs_ext_table ORDER BY 1;
+ id | descr
+----+--------
+  1 | text1
+  2 | text2
+  3 | text3
+  4 | text4
+  5 | text5
+  6 | text6
+  7 | text7
+  8 | text8
+  9 | text9
+ 10 | text10
+ 11 | text11
+ 12 | text12
+(12 rows)

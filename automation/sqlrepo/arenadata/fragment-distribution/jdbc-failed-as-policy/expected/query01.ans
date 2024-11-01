@@ -1,0 +1,8 @@
+-- start_ignore
+-- end_ignore
+-- @description query01 for PXF test to check fragments distribution across segments with JDBC profile using active-segment policy
+-- but without parameter ACTIVE_SEGMENT_COUNT
+SELECT * FROM fd_failed_active_segment_jdbc_limit_ext_table ORDER BY 1;
+ERROR:  PXF server error : The parameter ACTIVE_SEGMENT_COUNT is not define while the fragment distribution policy is active-segment. Add the parameter ACTIVE_SEGMENT_COUNT to the external table DDL
+HINT:  Check the PXF logs located in the '/usr/local/greenplum-db-devel/pxf/logs' directory on host 'localhost' or 'set client_min_messages=LOG' for additional details.
+CONTEXT:  External table fd_failed_active_segment_jdbc_limit_ext_table

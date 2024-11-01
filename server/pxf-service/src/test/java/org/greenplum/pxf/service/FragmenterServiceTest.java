@@ -4,12 +4,11 @@ import com.google.common.base.Ticker;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.conf.Configuration;
-import org.greenplum.pxf.api.error.PxfRuntimeException;
-import org.greenplum.pxf.api.examples.DemoFragmentMetadata;
 import org.greenplum.pxf.api.model.Fragment;
 import org.greenplum.pxf.api.model.Fragmenter;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.api.utilities.FragmenterCacheFactory;
+import org.greenplum.pxf.service.fragment.*;
 import org.greenplum.pxf.service.utilities.BasePluginFactory;
 import org.greenplum.pxf.service.utilities.GSSFailureHandler;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,42 +19,38 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.inOrder;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class FragmenterServiceTest {
+    @Mock
+    private BasePluginFactory mockPluginFactory;
+    @Mock
+    private Fragmenter fragmenter1;
+    @Mock
+    private Fragmenter fragmenter2;
+    @Mock
+    private Fragmenter fragmenter3;
+    @Mock
+    private FragmenterCacheFactory fragmenterCacheFactory;
+    @Mock
+    private FragmentStrategyProvider strategyProvider;
+    @Mock
+    private FragmentStrategy strategy;
 
-    @Mock private BasePluginFactory mockPluginFactory;
-    @Mock private Fragmenter fragmenter1;
-    @Mock private Fragmenter fragmenter2;
-    @Mock private Fragmenter fragmenter3;
     private Cache<String, List<Fragment>> fragmentCache;
     private FakeTicker fakeTicker;
     private FragmenterService fragmenterService;
     private Configuration configuration;
-
     private RequestContext context1;
     private RequestContext context2;
-    private RequestContext context3;
 
     @BeforeEach
     public void setup() {
@@ -80,18 +75,6 @@ class FragmenterServiceTest {
         context2.setDataSource("path.A");
         context2.setConfiguration(configuration);
 
-        context3 = new RequestContext();
-        context3.setTransactionId("XID-XYZ-654321");
-        context3.setFragmenter("org.greenplum.pxf.api.model.Fragmenter3");
-        context3.setSegmentId(0);
-        context3.setGpCommandCount(1);
-        context3.setGpSessionId(1);
-        context3.setTotalSegments(1);
-        context3.setDataSource("path.A");
-        context3.setConfiguration(configuration);
-
-        FragmenterCacheFactory fragmenterCacheFactory = mock(FragmenterCacheFactory.class);
-
         fakeTicker = new FakeTicker();
         fragmentCache = CacheBuilder.newBuilder()
                 .expireAfterAccess(10, TimeUnit.SECONDS)
@@ -99,132 +82,18 @@ class FragmenterServiceTest {
                 .build();
 
         lenient().when(fragmenterCacheFactory.getCache()).thenReturn(fragmentCache);
+        lenient().when(strategyProvider.getStrategy(any(RequestContext.class))).thenReturn(strategy);
+        lenient().when(strategy.filterFragments(any(), any())).thenReturn(Collections.emptyList());
 
         // use a real handler to ensure pass-through calls on default configuration
         fragmenterService = new FragmenterService(fragmenterCacheFactory,
-                mockPluginFactory, new GSSFailureHandler());
-    }
-
-    @Test
-    public void testFragmenterCallWithOneActiveSegmentCount() throws Throwable {
-
-        List<Fragment> fragmentList = Arrays.asList(
-                new Fragment("foo.bar", new DemoFragmentMetadata()),
-                new Fragment("bar.foo", new DemoFragmentMetadata()),
-                new Fragment("foobar", new DemoFragmentMetadata()),
-                new Fragment("barfoo", new DemoFragmentMetadata())
-        );
-
-        context1.setGpSessionId(0);
-        context1.setGpCommandCount(0);
-        context1.setSegmentId(0);
-        context1.setTotalSegments(2);
-        context1.addOption(FragmenterService.ACTIVE_SEGMENT_COUNT_OPTION, "1");
-
-        context2.setGpSessionId(0);
-        context2.setGpCommandCount(0);
-        context2.setSegmentId(1);
-        context2.setTotalSegments(2);
-        context2.addOption(FragmenterService.ACTIVE_SEGMENT_COUNT_OPTION, "1");
-
-        lenient().when(mockPluginFactory.getPlugin(context1, context1.getFragmenter())).thenReturn(fragmenter1);
-        lenient().when(fragmenter1.getFragments()).thenReturn(fragmentList);
-        lenient().when(mockPluginFactory.getPlugin(context2, context2.getFragmenter())).thenReturn(fragmenter2);
-        lenient().when(fragmenter2.getFragments()).thenReturn(fragmentList);
-
-        List<Fragment> response1 = fragmenterService.getFragmentsForSegment(context1);
-        List<Fragment> response2 = fragmenterService.getFragmentsForSegment(context2);
-
-        verify(fragmenter1, times(1)).getFragments();
-
-        assertEquals(4, response1.size());
-        assertEquals("foo.bar", response1.get(0).getSourceName());
-        assertEquals("bar.foo", response1.get(1).getSourceName());
-        assertEquals("foobar", response1.get(2).getSourceName());
-        assertEquals("barfoo", response1.get(3).getSourceName());
-
-        assertEquals(0, response2.size());
-    }
-
-    @Test
-    public void testFragmenterCallWith2ActiveSegmentCountAnd3TotalSegments() throws Throwable {
-
-        List<Fragment> fragmentList = Arrays.asList(
-                new Fragment("foo.bar", new DemoFragmentMetadata()),
-                new Fragment("bar.foo", new DemoFragmentMetadata()),
-                new Fragment("foobar", new DemoFragmentMetadata()),
-                new Fragment("barfoo", new DemoFragmentMetadata())
-        );
-
-        context1.setGpSessionId(0);
-        context1.setGpCommandCount(0);
-        context1.setSegmentId(0);
-        context1.setTotalSegments(3);
-        context1.addOption(FragmenterService.ACTIVE_SEGMENT_COUNT_OPTION, "2");
-
-        context2.setGpSessionId(0);
-        context2.setGpCommandCount(0);
-        context2.setSegmentId(1);
-        context2.setTotalSegments(3);
-        context2.addOption(FragmenterService.ACTIVE_SEGMENT_COUNT_OPTION, "2");
-
-        context3.setGpSessionId(0);
-        context3.setGpCommandCount(0);
-        context3.setSegmentId(2);
-        context3.setTotalSegments(3);
-        context3.addOption(FragmenterService.ACTIVE_SEGMENT_COUNT_OPTION, "2");
-
-        lenient().when(mockPluginFactory.getPlugin(context1, context1.getFragmenter())).thenReturn(fragmenter1);
-        lenient().when(fragmenter1.getFragments()).thenReturn(fragmentList);
-        lenient().when(mockPluginFactory.getPlugin(context2, context2.getFragmenter())).thenReturn(fragmenter2);
-        lenient().when(fragmenter2.getFragments()).thenReturn(fragmentList);
-        lenient().when(mockPluginFactory.getPlugin(context3, context3.getFragmenter())).thenReturn(fragmenter3);
-        lenient().when(fragmenter3.getFragments()).thenReturn(fragmentList);
-
-        List<Fragment> response1 = fragmenterService.getFragmentsForSegment(context1);
-        List<Fragment> response2 = fragmenterService.getFragmentsForSegment(context2);
-        List<Fragment> response3 = fragmenterService.getFragmentsForSegment(context3);
-
-        verify(fragmenter1, times(1)).getFragments();
-
-        assertEquals(2, response1.size());
-        assertEquals("foo.bar", response1.get(0).getSourceName());
-        assertEquals("foobar", response1.get(1).getSourceName());
-
-        assertEquals(2, response3.size());
-        assertEquals("bar.foo", response3.get(0).getSourceName());
-        assertEquals("barfoo", response3.get(1).getSourceName());
-
-        assertEquals(0, response2.size());
-    }
-
-    @Test
-    public void testFragmenterCallWithWrongActiveSegmentCount() {
-        context1.setTransactionId("0");
-        context1.setSegmentId(0);
-        context1.setTotalSegments(1);
-        context1.addOption(FragmenterService.ACTIVE_SEGMENT_COUNT_OPTION, "WRONG");
-
-        Exception e = assertThrows(PxfRuntimeException.class, () -> fragmenterService.getFragmentsForSegment(context1));
-        assertEquals("Failed to get active segment count: For input string: \"WRONG\". Check the value of the parameter 'ACTIVE_SEGMENT_COUNT'", e.getMessage());
-    }
-
-    @Test
-    public void testFragmenterCallWithLessThanOneActiveSegmentCount() {
-        context1.setTransactionId("0");
-        context1.setSegmentId(0);
-        context1.setTotalSegments(1);
-        context1.addOption(FragmenterService.ACTIVE_SEGMENT_COUNT_OPTION, "0");
-
-        Exception e = assertThrows(PxfRuntimeException.class, () -> fragmenterService.getFragmentsForSegment(context1));
-        assertTrue(e.getMessage().contains("The parameter 'ACTIVE_SEGMENT_COUNT' has the value 0. The value of this " +
-                "parameter cannot be less than 1 or cannot be greater than the total amount of segments [1 segment(s)]"));
+                mockPluginFactory, new GSSFailureHandler(), strategyProvider);
     }
 
     @Test
     public void getFragmentsResponseFromEmptyCache() throws Throwable {
         when(mockPluginFactory.getPlugin(context1, context1.getFragmenter())).thenReturn(fragmenter1);
-
+        when(fragmenter1.getFragments()).thenReturn(Collections.emptyList());
         fragmenterService.getFragmentsForSegment(context1);
         verify(fragmenter1, times(1)).getFragments();
     }
@@ -297,41 +166,6 @@ class FragmenterServiceTest {
     }
 
     @Test
-    public void testFragmenterCallForTwoSegments() throws Throwable {
-
-        List<Fragment> fragmentList = Arrays.asList(
-                new Fragment("foo.bar", new DemoFragmentMetadata()),
-                new Fragment("bar.foo", new DemoFragmentMetadata()),
-                new Fragment("foobar", new DemoFragmentMetadata()),
-                new Fragment("barfoo", new DemoFragmentMetadata())
-        );
-
-        context1.setTransactionId("XID-XYZ-123456");
-        context1.setSegmentId(0);
-        context1.setTotalSegments(2);
-
-        context2.setTransactionId("XID-XYZ-123456");
-        context2.setSegmentId(1);
-        context2.setTotalSegments(2);
-
-        when(mockPluginFactory.getPlugin(context1, context1.getFragmenter())).thenReturn(fragmenter1);
-        when(fragmenter1.getFragments()).thenReturn(fragmentList);
-
-        List<Fragment> response1 = fragmenterService.getFragmentsForSegment(context1);
-        List<Fragment> response2 = fragmenterService.getFragmentsForSegment(context2);
-
-        verify(fragmenter1, times(1)).getFragments();
-
-        assertEquals(2, response1.size());
-        assertEquals("foo.bar", response1.get(0).getSourceName());
-        assertEquals("foobar", response1.get(1).getSourceName());
-
-        assertEquals(2, response2.size());
-        assertEquals("bar.foo", response2.get(0).getSourceName());
-        assertEquals("barfoo", response2.get(1).getSourceName());
-    }
-
-    @Test
     public void getSameFragmenterCallTwiceUsesCache() throws Throwable {
         List<Fragment> fragmentList = new ArrayList<>();
 
@@ -386,13 +220,12 @@ class FragmenterServiceTest {
 
         for (int i = 0; i < threads.length; i++) {
             threads[i] = new Thread(() -> {
-
                 try {
                     fragmenterService.getFragmentsForSegment(context1);
-                    finishedCount.incrementAndGet();
-                } catch (Throwable e) {
-                    e.printStackTrace();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
                 }
+                finishedCount.incrementAndGet();
             });
             threads[i].start();
         }
@@ -421,9 +254,7 @@ class FragmenterServiceTest {
         assertEquals(0, fragmentCache.size());
     }
 
-    private void testContextsAreNotCached(RequestContext context1, RequestContext context2)
-            throws Throwable {
-
+    private void testContextsAreNotCached(RequestContext context1, RequestContext context2) throws Throwable {
         List<Fragment> fragmentList1 = new ArrayList<>();
         List<Fragment> fragmentList2 = new ArrayList<>();
 
@@ -538,7 +369,6 @@ class FragmenterServiceTest {
 
     @Test
     public void testBeginIterationGSSFailureAfterMaxRetries() throws Throwable {
-        List<Fragment> fragmentList = new ArrayList<>();
         configuration.set("hadoop.security.authentication", "kerberos");
         configuration.set("pxf.sasl.connection.retries", "2");
 
@@ -561,43 +391,5 @@ class FragmenterServiceTest {
         inOrder.verify(fragmenter3).getFragments(); // third  attempt on fragmenter #3
         inOrder.verifyNoMoreInteractions();
         verifyNoMoreInteractions(mockPluginFactory);
-    }
-
-    // ----- TESTS for performance of list traversal -----
-    @Test
-    public void testListTraversalPerformance() throws Throwable {
-
-        // This test makes sure we iterate properly (using an iterator, not the index-based for loop) over a LinkedList
-        // that is returned by a fragmenter when building a list of fragment for a segment.
-        // Tested on MacBookPro, the timings are as follows:
-        // 10M fragments - from  15 mins to 1.3 secs
-        //  1M fragments - from 8.2 secs to 1.3 secs
-        // so we will run the large dataset that would've taken 15 minutes and make sure it computes within 10 seconds
-        // allowing 8x margin for test slowness when running on slower machines on in the cloud under a heavy workload
-
-        Fragment fragment = new Fragment("foo.bar", new DemoFragmentMetadata());
-        List<Fragment> fragmentList = new LinkedList<>();
-        for (int i=0; i<10000000; i++) {
-            fragmentList.add(fragment); // add the same fragment, save on memory, we only care about testing timings
-        }
-
-        context1.setTransactionId("XID-XYZ-123456");
-        context1.setSegmentId(0);
-        context1.setTotalSegments(100);
-
-        when(mockPluginFactory.getPlugin(context1, context1.getFragmenter())).thenReturn(fragmenter1);
-        when(fragmenter1.getFragments()).thenReturn(fragmentList);
-
-        long start = System.currentTimeMillis();
-        List<Fragment> response = fragmenterService.getFragmentsForSegment(context1);
-        long end = System.currentTimeMillis();
-
-        verify(fragmenter1, times(1)).getFragments();
-
-        assertTrue(response instanceof ArrayList);
-        assertEquals(100000, response.size());
-        assertEquals("foo.bar", response.get(0).getSourceName());
-        assertTrue(end-start < 10000L); // should be less than 10 secs (8x margin), not minutes
-
     }
 }

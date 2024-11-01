@@ -1,7 +1,7 @@
 -- start_ignore
 -- end_ignore
--- @description query01 for PXF test to check fragments distribution across segments with JDBC profile
-SELECT * FROM fd_jdbc_limit_ext_table ORDER BY 1;
+-- @description query01 for PXF test to check fragments distribution across segments with JDBC profile using random policy
+SELECT * FROM fd_random_jdbc_ext_table ORDER BY 1;
  id | descr
 ----+-------
   1 | text1
@@ -25,4 +25,3 @@ SELECT * FROM fd_jdbc_limit_ext_table ORDER BY 1;
   19 | text19
   20 | text20
 (20 rows)
-

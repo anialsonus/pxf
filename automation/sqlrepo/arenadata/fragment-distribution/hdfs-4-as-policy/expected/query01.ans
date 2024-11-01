@@ -1,13 +1,13 @@
 -- start_ignore
 -- end_ignore
 -- @description query01 for PXF test to check fragments distribution across segments with HDFS profile
-SELECT * FROM fragment_distribution_hdfs_seg_limit_ext_table ORDER BY 1 LIMIT 5;
+SELECT * FROM fd_4_active_segment_hdfs_ext_table ORDER BY 1;
  id | descr
 ----+-------
   1 | text1
-  1 | text1
-  1 | text1
-  1 | text1
-  1 | text1
-(5 rows)
-
+  2 | text2
+  3 | text3
+  4 | text4
+  5 | text5
+  6 | text6
+(6 rows)
