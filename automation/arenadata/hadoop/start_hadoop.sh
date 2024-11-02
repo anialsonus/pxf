@@ -197,7 +197,7 @@ wait_for_it hadoop:2181
 echo "-----------------------------"
 echo "Put PXF HBase library on HDFS"
 echo "-----------------------------"
-cp /usr/local/greenplum-db-devel/pxf/share/pxf-hbase-*.jar $HBASE_HOME_DIR/lib/
+cp /usr/local/greenplum-db-devel/pxf/share/pxf-hbase-lib-*.jar $HBASE_HOME_DIR/lib/
 
 echo "----------------------------"
 echo "        Start HBase"

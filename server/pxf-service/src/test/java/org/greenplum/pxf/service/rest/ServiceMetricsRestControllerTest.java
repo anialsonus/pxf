@@ -23,8 +23,8 @@ class ServiceMetricsRestControllerTest {
 
     @Test
     public void get() {
-        MetricsEndpoint.MetricResponse metricResponse = mock(MetricsEndpoint.MetricResponse.class);
-        when(metricsEndpoint.metric(anyString(), any())).thenReturn(metricResponse).thenReturn(null);
+        MetricsEndpoint.MetricDescriptor metricDescriptor = mock(MetricsEndpoint.MetricDescriptor.class);
+        when(metricsEndpoint.metric(anyString(), any())).thenReturn(metricDescriptor).thenReturn(null);
         HealthComponent healthComponent = mock(HealthComponent.class);
         Status status = mock(Status.class);
         String code = "DOWN";
@@ -34,17 +34,17 @@ class ServiceMetricsRestControllerTest {
         ServiceMetricsDto result = controller.get();
         assertEquals(code, result.getStatus());
         assertEquals(1, result.getMetrics().size());
-        result.getMetrics().stream().findAny().filter(metricResponse::equals).orElseGet(Assertions::fail);
+        result.getMetrics().stream().findAny().filter(metricDescriptor::equals).orElseGet(Assertions::fail);
     }
 
     @Test
     public void getClusterMetrics() {
-        MetricsEndpoint.MetricResponse metricResponse = mock(MetricsEndpoint.MetricResponse.class);
-        when(metricsEndpoint.metric(anyString(), any())).thenReturn(metricResponse).thenReturn(null);
+        MetricsEndpoint.MetricDescriptor metricDescriptor = mock(MetricsEndpoint.MetricDescriptor.class);
+        when(metricsEndpoint.metric(anyString(), any())).thenReturn(metricDescriptor).thenReturn(null);
         ServiceMetricsRestController.ClusterMetrics result = controller.getClusterMetrics();
         assertEquals(clusterName, result.getCluster());
         assertEquals(hostName, result.getHostname());
         assertEquals(1, result.getMetrics().size());
-        result.getMetrics().stream().findAny().filter(metricResponse::equals).orElseGet(Assertions::fail);
+        result.getMetrics().stream().findAny().filter(metricDescriptor::equals).orElseGet(Assertions::fail);
     }
 }

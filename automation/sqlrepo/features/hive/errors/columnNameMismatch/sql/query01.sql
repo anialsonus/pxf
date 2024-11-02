@@ -1,11 +1,14 @@
--- @description query01 for PXF hive column count mismatch
+--- @description query01 for PXF hive column count mismatch
 
 -- start_matchsubs
---                                                                                               
+--
 -- # create a match/subs
 --
 -- m/   description   .*/
 -- s/description   .*/description   DESCRIPTION/
+--
+-- m/Check the PXF logs located in the .*/
+-- s/Check the PXF logs located in the .*/Check the PXF logs/
 --
 -- m/DETAIL/
 -- s/DETAIL/CONTEXT/

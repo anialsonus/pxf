@@ -16,6 +16,10 @@ dependencies {
      *******************************/
 
     testImplementation('org.springframework.boot:spring-boot-starter-test')
+
+    // https://projectlombok.org
+    compileOnly("org.projectlombok:lombok")
+    annotationProcessor("org.projectlombok:lombok")
 }
 
 test {

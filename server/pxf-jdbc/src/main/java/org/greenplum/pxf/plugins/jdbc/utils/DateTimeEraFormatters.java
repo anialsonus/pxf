@@ -39,6 +39,22 @@ public class DateTimeEraFormatters {
             .toFormatter()
             .withLocale(Locale.ROOT);
     /**
+     * Used to parse String without delimiters to LocalDateTime.
+     * Examples: "19800810T171020" -> 1980-08-10T17:10:20; "1234561019T111213" -> +123456-10-19T11:12:13;
+     * "12341019T101115 BC" -> -1233-10-19T10:11:15
+     */
+    public static final DateTimeFormatter LOCAL_DATE_TIME_WITHOUT_DELIMITERS_PARSE_FORMATTER = new DateTimeFormatterBuilder()
+            .appendValue(ChronoField.YEAR_OF_ERA, 1, 9, SignStyle.NORMAL)
+            .appendValue(ChronoField.MONTH_OF_YEAR, 2)
+            .appendValue(ChronoField.DAY_OF_MONTH, 2)
+            .appendLiteral('T')
+            .appendValue(ChronoField.HOUR_OF_DAY, 2)
+            .appendValue(ChronoField.MINUTE_OF_HOUR, 2)
+            .appendValue(ChronoField.SECOND_OF_MINUTE, 2)
+            .appendOptional(ERA_FORMATTER)
+            .toFormatter()
+            .withLocale(Locale.ROOT);
+    /**
      * Used to parse String to LocalDate.
      * Examples: "1977-12-11" -> 1977-12-11; "456789-12-11" -> +456789-12-11; "0010-12-11 BC" -> -0009-12-11
      */
@@ -110,6 +126,20 @@ public class DateTimeEraFormatters {
     public static LocalDateTime getLocalDateTime(String rawVal) {
         try {
             return LocalDateTime.parse(rawVal, LOCAL_DATE_TIME_PARSE_FORMATTER);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Failed to convert timestamp '" + rawVal + "' to the LocalDateTime class: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Convert a string to LocalDateTime class with formatter
+     *
+     * @param rawVal the LocalDateTime in a string format without delimiters yyyyMMddTHHmmss
+     * @return LocalDateTime
+     */
+    public static LocalDateTime getLocalDateTimeFromStringWithoutDelimiters(String rawVal) {
+        try {
+            return LocalDateTime.parse(rawVal, LOCAL_DATE_TIME_WITHOUT_DELIMITERS_PARSE_FORMATTER);
         } catch (Exception e) {
             throw new IllegalArgumentException("Failed to convert timestamp '" + rawVal + "' to the LocalDateTime class: " + e.getMessage(), e);
         }

@@ -10,5 +10,5 @@ import java.util.Collection;
 @RequiredArgsConstructor
 public class ServiceMetricsDto {
     private final String status;
-    private final Collection<MetricsEndpoint.MetricResponse> metrics;
+    private final Collection<MetricsEndpoint.MetricDescriptor> metrics;
 }

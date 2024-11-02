@@ -103,6 +103,6 @@ public class ServiceMetricsRestController {
     public static class ClusterMetrics {
         private final String cluster;
         private final String hostname;
-        private final Collection<MetricsEndpoint.MetricResponse> metrics;
+        private final Collection<MetricsEndpoint.MetricDescriptor> metrics;
     }
 }

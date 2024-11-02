@@ -50,8 +50,11 @@ dependencies {
 
     testImplementation("org.apache.parquet:parquet-pig")
     testImplementation('org.springframework.boot:spring-boot-starter-test')
-    testImplementation('org.mockito:mockito-inline')
     testImplementation("org.apache.hadoop:hadoop-common")
+
+    // https://projectlombok.org
+    compileOnly("org.projectlombok:lombok")
+    annotationProcessor("org.projectlombok:lombok")
 }
 
 test {

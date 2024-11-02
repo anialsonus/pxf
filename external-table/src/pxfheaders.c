@@ -31,6 +31,7 @@
 #include "utils/timestamp.h"
 #include "nodes/makefuncs.h"
 #include "cdb/cdbvars.h"
+#include "storage/proc.h"
 
 /* helper function declarations */
 static void add_alignment_size_httpheader(CHURL_HEADERS headers);
@@ -183,7 +184,7 @@ build_http_headers(PxfInputData *input)
 
 	pg_ltoa(gp_session_id, long_number);
 	churl_headers_append(headers, "X-GP-SESSION-ID", long_number);
-	pg_ltoa(gp_command_count, long_number);
+	pg_ltoa(MyProc->queryCommandId, long_number);
 	churl_headers_append(headers, "X-GP-COMMAND-COUNT", long_number);
 
 	add_alignment_size_httpheader(headers);

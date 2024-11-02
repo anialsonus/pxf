@@ -1,0 +1,28 @@
+apply plugin: "java-library"
+
+jar {
+    enabled = true
+}
+
+compileJava   {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation("com.google.protobuf:protobuf-java")
+    implementation("org.apache.hbase:hbase-client")                  { transitive = false }
+    implementation("org.apache.hbase:hbase-common")                  { transitive = false }
+    implementation("org.apache.hbase:hbase-protocol")                { transitive = false }
+
+    compileOnly("org.apache.hbase:hbase-annotations")
+    compileOnly("com.google.code.findbugs:annotations")
+}
+
+tasks.test {
+    useJUnitPlatform()
+}

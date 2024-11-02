@@ -83,32 +83,56 @@ bash -c "/usr/sbin/sshd"
 # Change the owner
 chown -R gpadmin:gpadmin /home/gpadmin/.m2/
 
-# Wait when all servers will be available by ssh connection
+# Get ssh public keys of hosts
+echo "**********************************"
+echo "Get ssh public keys of hosts"
+echo "**********************************"
+keys=()
 max_iterations=10
 wait_seconds=3
 iterations=0
+
+servers=()
+for server in $DOCKER_GP_CLUSTER_HOSTS; do
+  servers+=("$server")
+done
+
 while true
 do
   ((iterations++))
-  echo "Attempt $iterations"
+  echo "Get public key. Attempt $iterations"
   status=0
-  for server in $DOCKER_GP_CLUSTER_HOSTS
+  toremove=()
+  for server in "${servers[@]}"
   do
-      ssh-keyscan $server
-      if ! [ $? -eq 0 ]; then
-        echo "Server $server is not available for ssh connection. We will try again..."
+      echo "Get public key for $server"
+      key=$(ssh-keyscan -t ssh-rsa $server)
+      if [ $? -ne 0 ] ||  [[ $key != *"ssh-rsa"* ]]; then
+        echo "Server $server doesn't have the public key yet. We will try again..."
         status=1
         break
+      else
+        echo "Add key for server $server"
+        keys+=("$key")
+        toremove+=("$server")
       fi
   done
   if [ $status -eq 0 ]; then
-    echo "All Greenplum servers are available for SSH connection"
+    echo "All ADB servers have public key"
     break
   elif [ "$iterations" -ge "$max_iterations" ]; then
-    echo "Error to connect to some Greenplum server via SSH after $max_iterations tries. Exit from script!"
+    echo "Error to get public key for some ADB server after $max_iterations tries. Exit from script!"
     exit 1
   else
-    echo "Wait $wait_seconds seconds and try again to connect to the servers"
+    for server in "${toremove[@]}"; do
+      for i in "${!servers[@]}"; do
+        if [[ ${servers[i]} = "$server" ]]; then
+          unset 'servers[i]'
+        fi
+      done
+    done
+    echo "The following servers don't have the key yet: ${servers[*]}"
+    echo "Wait $wait_seconds seconds and try again to get public key"
     sleep $wait_seconds
   fi
 done
@@ -117,9 +141,9 @@ done
 echo "**********************************************"
 echo "Copy keys, set bash profile and create configs"
 echo "**********************************************"
-for server in $DOCKER_GP_CLUSTER_HOSTS
+for key in "${keys[@]}"
 do
-  bash -c "ssh-keyscan $server >> /home/gpadmin/.ssh/known_hosts"
+  bash -c "echo $key >> /home/gpadmin/.ssh/known_hosts"
 done
 bash -c "cat /root/.ssh/id_rsa > /home/gpadmin/.ssh/id_rsa && cat /root/.ssh/id_rsa.pub > /home/gpadmin/.ssh/id_rsa.pub && cat /root/.ssh/authorized_keys > /home/gpadmin/.ssh/authorized_keys"
 bash -c "echo \"$CONFIG\" > /home/gpadmin/gpdb_src/gpAux/gpdemo/create_cluster.conf"
@@ -202,7 +226,7 @@ echo "Prepare configs for automation tests"
 echo "------------------------------------"
 sudo -H -u gpadmin bash -c -l "HIVE_SERVER_HOST=$HIVE_SERVER_HOST JDBC_HOST=$DOCKER_GP_MASTER_SERVER make -C ~/workspace/pxf/automation  sync_jdbc_config"
 
-# PXF runs only on segment servers
+# Start PXF
 for server in $DOCKER_GP_CLUSTER_HOSTS
 do
   echo "---------"

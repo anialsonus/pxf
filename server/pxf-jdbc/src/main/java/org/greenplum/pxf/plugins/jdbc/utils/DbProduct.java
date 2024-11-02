@@ -25,8 +25,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
+import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
 /**
  * A tool class to change PXF-JDBC plugin behaviour for certain external databases
@@ -82,6 +85,11 @@ public enum DbProduct {
         @Override
         public String wrapDate(@NonNull LocalDate val, boolean isDateWideRange) {
             return wrapDate(isDateWideRange ? val.format(DateTimeEraFormatters.LOCAL_DATE_FORMATTER) : val.toString());
+        }
+
+        @Override
+        public String wrapTimestamp(@NonNull LocalDateTime val, boolean isDateWideRange) {
+            return wrapTimestamp(isDateWideRange ? val.format(DateTimeEraFormatters.LOCAL_DATE_TIME_FORMATTER) : val.toString());
         }
     },
 
@@ -149,6 +157,18 @@ public enum DbProduct {
      */
     public String wrapTimestamp(String val) {
         return "'" + val + "'";
+    }
+
+    /**
+     * Wraps a given timestamp value the way required by target database
+     *
+     * @param val {@link java.sql.Timestamp} object to wrap
+     * @return a string with a properly wrapped timestamp object
+     * @param isDateWideRange flag which is used when the year might contain more than 4 digits
+     */
+    public String wrapTimestamp(@NonNull LocalDateTime val, boolean isDateWideRange) {
+        return wrapTimestamp(isDateWideRange ? val.format(ISO_LOCAL_DATE_TIME) :
+                val.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
     }
 
     /**

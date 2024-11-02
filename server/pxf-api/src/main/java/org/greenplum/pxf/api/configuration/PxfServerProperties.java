@@ -28,6 +28,24 @@ public class PxfServerProperties {
     private String base;
 
     /**
+     * Enable nested exception
+     */
+    @Setter
+    private boolean nestedExceptionEnabled;
+
+    /**
+     * Set nested exception wrapped depth
+     */
+    @Setter
+    private int nestedExceptionWrappedDepth = 1000;
+
+    /**
+     * Set nested exception trace depth
+     */
+    @Setter
+    private int nestedExceptionTraceDepth = 10;
+
+    /**
      * Customizable settings for tomcat through PXF
      */
     @Setter

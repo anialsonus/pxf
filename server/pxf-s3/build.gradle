@@ -36,6 +36,10 @@ dependencies {
 
     testImplementation('org.springframework.boot:spring-boot-starter-test')
     testImplementation("org.apache.hadoop.thirdparty:hadoop-shaded-guava")
+
+    // https://projectlombok.org
+    compileOnly("org.projectlombok:lombok")
+    annotationProcessor("org.projectlombok:lombok")
 }
 
 test {

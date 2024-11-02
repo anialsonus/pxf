@@ -15,6 +15,10 @@
 -- m/malformed boolean literal (.*)/
 -- s/malformed boolean literal (.*)/malformed boolean literal value/
 --
+-- m/Check the PXF logs located in the .*/
+-- s/Check the PXF logs located in the .*/Check the PXF logs/
+--
+-- end_matchsubs
 -- end_matchsubs
 
 \pset null 'NIL'

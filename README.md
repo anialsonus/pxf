@@ -70,28 +70,37 @@ To build PXF, you must have:
     source /usr/local/greenplum-db/greenplum_path.sh
     ```
 
-3. JDK 1.8 or JDK 11 to compile/run
+3. JDK 17 to compile/run
 
     Export your `JAVA_HOME`:
     ```
     export JAVA_HOME=<PATH_TO_YOUR_JAVA_HOME>
     ```
 
-4. Go (1.9 or later)
+   To install Java 17, download and install the appropriate package for your platforms from [Java SE 17 Archive Downloads](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)
 
-    To install Go on CentOS, `sudo yum install go`. For other platforms, see the [Go downloads page](https://golang.org/dl/).
+4. Go (1.21.3 or later)
 
-    Make sure to export your `GOPATH` and add go to your `PATH`. For example:
-    ```shell
-    export GOPATH=$HOME/go
-    export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
-    ```
+   To install Go, download the appropriate version for your platforms from: [Go downloads page](https://golang.org/dl/).
+
+   Make sure to export your `GOPATH` and add go to your `PATH`. For example:
+
+   ```shell
+   export GOPATH=$HOME/go
+   export GOPROXY=https://proxy.golang.org
+   export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
+   ```
 
    For the new M1 Apple Macs, add the following to your path instead
    ```shell
    export PATH=$PATH:/opt/homebrew/bin/go/bin:$GOPATH/bin
    ```
 
+   Install required Go packages:
+
+   ```shell
+   go install github.com/onsi/ginkgo/v2/ginkgo@latest
+   ```
 5. cURL (7.29 or later):
 
     To install cURL devel package on CentOS 7, `sudo yum install libcurl-devel`.
@@ -163,7 +172,7 @@ tar xzf singlecluster-HDP.tar.gz
 
 Create a symlink using `ln -s ~/workspace/singlecluster-HDP ~/workspace/singlecluster` and then follow the steps in [Setup Hadoop](#Setup-Hadoop).
 
-While PXF can run on either Java 8 or Java 11, please ensure that you are running Java 8 for hdfs, hadoop, etc. Please set your java version by seting your `JAVA_HOME` to the appropriate location.
+While PXF runs on Java 17, please ensure that you are running Java 8 for hdfs, hadoop, etc. Please set your java version by seting your `JAVA_HOME` to the appropriate location.
 
 On a Mac, you can set your java version using `JAVA_HOME` like so:
 ```

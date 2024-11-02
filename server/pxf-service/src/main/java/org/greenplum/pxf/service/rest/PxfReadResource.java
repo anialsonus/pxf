@@ -1,5 +1,6 @@
 package org.greenplum.pxf.service.rest;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.service.RequestParser;
 import org.greenplum.pxf.service.controller.ReadService;
@@ -8,8 +9,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
-
-import javax.servlet.http.HttpServletRequest;
 
 /**
  * PXF REST endpoint for read data requests.

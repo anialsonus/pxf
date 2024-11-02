@@ -1,11 +1,11 @@
 package org.greenplum.pxf.service.spring;
 
+import jakarta.servlet.http.HttpServletResponse;
 import org.greenplum.pxf.api.error.PxfRuntimeException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
-import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 /**

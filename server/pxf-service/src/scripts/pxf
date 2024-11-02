@@ -59,8 +59,8 @@ export PXF_RUNDIR=${PXF_RUNDIR:=${PXF_BASE}/run}
 # Port
 export PXF_PORT=${PXF_PORT:=5888}
 
-# Memory
-export PXF_JVM_OPTS=${PXF_JVM_OPTS:='-Xmx2g -Xms1g'}
+# Memory and modules
+export PXF_JVM_OPTS=${PXF_JVM_OPTS:='-Xmx2g -Xms1g --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.security.jgss/sun.security.krb5=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED'}
 
 # Set to true to enable Remote debug via port 2020
 export PXF_DEBUG=${PXF_DEBUG:-false}
@@ -381,7 +381,7 @@ function do_start() {
     JAVA_OPTS=($PXF_JVM_OPTS  "${PXF_OPTS[@]}")
     RUN_ARGS=(--spring.config.location=classpath:/application.properties,file:${PXF_BASE}/conf/pxf-application.properties)
 
-    local arguments=(-Dsun.misc.URLClassPath.disableJarChecking=true "${JAVA_OPTS[@]}" -jar "$jarfile" $RUN_ARGS)
+    local arguments=(--add-opens=java.security.jgss/sun.security.krb5=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED -Dsun.misc.URLClassPath.disableJarChecking=true "${JAVA_OPTS[@]}" -jar "$jarfile" $RUN_ARGS)
 
     working_dir=$(dirname "$jarfile")
     pushd "$working_dir" > /dev/null || exit 1

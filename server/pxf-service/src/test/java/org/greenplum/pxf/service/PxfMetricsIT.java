@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.mockito.Mock;
 import org.mockito.stubbing.Answer;
-import org.springframework.boot.test.autoconfigure.actuate.metrics.AutoConfigureMetrics;
+import org.springframework.boot.test.autoconfigure.actuate.observability.AutoConfigureObservability;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -18,17 +18,15 @@ import org.springframework.util.MultiValueMap;
 
 import java.io.OutputStream;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.condition.OS.MAC;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.same;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = PxfServiceApplication.class)
-@AutoConfigureMetrics
+@AutoConfigureObservability
 // on MacOS with Intel chip (and JDK 8) this test crashes the JVM. Commenting out for now to not run on Mac.
 @DisabledOnOs(MAC)
 public class PxfMetricsIT {
@@ -119,9 +117,9 @@ public class PxfMetricsIT {
                 .expectStatus().isOk()
                 .expectBody(String.class).returnResult().getResponseBody();
         assertNotNull(prometheusResponse);
-        assertTrue(prometheusResponse.contains("http_server_requests_seconds_count{application=\"pxf-service\",exception=\"None\",method=\"GET\",outcome=\"SUCCESS\",profile=\"profile:test\",segment=\"77\",server=\"speedy\",status=\"200\",uri=\"/pxf/read\",user=\"reader\",} 1.0\n"));
-        assertTrue(prometheusResponse.contains("http_server_requests_seconds_count{application=\"pxf-service\",exception=\"None\",method=\"POST\",outcome=\"SUCCESS\",profile=\"profile:test\",segment=\"77\",server=\"speedy\",status=\"200\",uri=\"/pxf/write\",user=\"writer\",} 1.0\n"));
-        assertTrue(prometheusResponse.contains("http_server_requests_seconds_count{application=\"pxf-service\",exception=\"None\",method=\"GET\",outcome=\"SUCCESS\",profile=\"unknown\",segment=\"unknown\",server=\"unknown\",status=\"200\",uri=\"/actuator/health\",user=\"unknown\",} 1.0\n"));
+        assertThat(prometheusResponse).contains("http_server_requests_seconds_count{application=\"pxf-service\",error=\"none\",exception=\"none\",method=\"GET\",outcome=\"SUCCESS\",profile=\"profile:test\",segment=\"77\",server=\"speedy\",status=\"200\",uri=\"/pxf/read\",user=\"reader\",} 1.0\n");
+        assertThat(prometheusResponse).contains("http_server_requests_seconds_count{application=\"pxf-service\",error=\"none\",exception=\"none\",method=\"POST\",outcome=\"SUCCESS\",profile=\"profile:test\",segment=\"77\",server=\"speedy\",status=\"200\",uri=\"/pxf/write\",user=\"writer\",} 1.0\n");
+        assertThat(prometheusResponse).contains("http_server_requests_seconds_count{application=\"pxf-service\",error=\"none\",exception=\"none\",method=\"GET\",outcome=\"SUCCESS\",profile=\"unknown\",segment=\"unknown\",server=\"unknown\",status=\"200\",uri=\"/actuator/health\",user=\"unknown\",} 1.0\n");
     }
 
     private void mockServices() throws Exception {

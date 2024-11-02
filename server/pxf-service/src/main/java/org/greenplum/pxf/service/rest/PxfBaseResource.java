@@ -1,5 +1,6 @@
 package org.greenplum.pxf.service.rest;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.service.RequestParser;
@@ -7,8 +8,6 @@ import org.greenplum.pxf.service.controller.PxfErrorReporter;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.MultiValueMap;
-
-import javax.servlet.http.HttpServletRequest;
 
 /**
  * Base class for PXF REST resources that provides unified error logging and wrapping.

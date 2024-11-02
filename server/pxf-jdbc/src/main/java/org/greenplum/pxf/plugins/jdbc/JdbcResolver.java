@@ -274,8 +274,8 @@ public class JdbcResolver extends JdbcBasePlugin implements Resolver {
                         break;
                     default:
                         throw new UnsupportedOperationException(
-                                String.format("Field type '%s' (column '%s') is not supported",
-                                        oneFieldType, column));
+                                String.format("Column type '%s' (column '%s') is not supported",
+                                        columnType, column));
                 }
             }
         }

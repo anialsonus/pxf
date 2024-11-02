@@ -24,15 +24,14 @@ buildscript {
 }
 
 plugins {
-    id "io.franzbecker.gradle-lombok" version "3.3.0"
     id "org.springframework.boot" version "${springBootVersion}" apply false
     id 'io.spring.dependency-management' version '1.0.11.RELEASE'
 }
 
 // override Spring Framework version to pick the Spring MVC 5.3.33 with the async race condition fix
 // https://github.com/spring-projects/spring-framework/issues/32342
-ext['spring-framework.version'] = '5.3.33'
-ext['tomcat.version'] = '9.0.87'
+ext['spring-framework.version'] = '6.1.5'
+ext['tomcat.version'] = '10.1.28'
 
 def javaProjects = subprojects.findAll {
     it.name.startsWith("pxf-")
@@ -62,8 +61,8 @@ allprojects {
 
 idea {
     project {
-        jdkName = "1.8"
-        languageLevel = "8"
+        jdkName = "1.17"
+        languageLevel = "17"
         vcs = "Git"
     }
 }
@@ -71,13 +70,12 @@ idea {
 configure(javaProjects) {
     apply plugin: 'java'
     apply plugin: 'io.spring.dependency-management'
-    apply plugin: "io.franzbecker.gradle-lombok"
 
     group = 'org.greenplum.pxf'
     version = "${version}"
 
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 
     dependencyManagement {
         imports {
@@ -131,6 +129,13 @@ configure(javaProjects) {
             dependency("org.threeten:threeten-extra:1.5.0")
             dependency("org.tukaani:xz:1.8")
             dependency("org.wildfly.openssl:wildfly-openssl:1.0.7.Final")
+
+            // for s3
+            dependency("org.apache.httpcomponents:httpclient:4.5.14")
+            dependency("org.apache.httpcomponents:httpcore:4.4.16")
+
+            // https://projectlombok.org
+            dependency("org.projectlombok:lombok:1.18.20")
 
             // The snappy-java:1.1.8.4 is required for PPC64LE arch.
             dependency("org.xerial.snappy:snappy-java:1.1.8.4")
@@ -262,7 +267,6 @@ configure(javaProjects) {
                 exclude("org.junit.jupiter:junit-jupiter-engine")
                 exclude("org.junit.jupiter:junit-jupiter-api")
             }
-
         }
     }
 
@@ -369,9 +373,9 @@ task stage(type: Copy) {
     description "Build PXF server and stage resulting artifacts for packaging."
     dependsOn ":pxf-service:bootJar"
 
-    // Provide the pxf-hbase jar. The pxf-hbase.jar is required for the PXF
+    // Provide the pxf-hbase-lib jar. The pxf-hbase-lib.jar is required for the PXF
     // HBase connector to support filter push down
-    from("pxf-hbase/build/libs") { into 'share' }
+    from("pxf-hbase-lib/build/libs") { into 'share' }
     from("pxf-service/build/libs") {
         into 'application'
         rename 'pxf-service-(.+)', 'pxf-app-$1'

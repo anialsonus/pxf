@@ -34,6 +34,7 @@
 #include "utils/formatting.h"
 #include "utils/timestamp.h"
 #include "utils/syscache.h"
+#include "storage/proc.h"
 
 /* helper function declarations */
 static void AddAlignmentSizeHttpHeader(CHURL_HEADERS headers);
@@ -108,7 +109,7 @@ BuildHttpHeaders(CHURL_HEADERS headers,
 
 	pg_ltoa(gp_session_id, long_number);
 	churl_headers_append(headers, "X-GP-SESSION-ID", long_number);
-	pg_ltoa(gp_command_count, long_number);
+	pg_ltoa(MyProc->queryCommandId, long_number);
 	churl_headers_append(headers, "X-GP-COMMAND-COUNT", long_number);
 
 	AddAlignmentSizeHttpHeader(headers);

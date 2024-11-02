@@ -358,14 +358,16 @@ function setup_gpadmin_user() {
 		gpadmin soft nproc 131072
 		gpadmin soft nofile 65536
 	EOF
-	echo "export JAVA_HOME=${JAVA_HOME}" >> ~gpadmin/.bashrc
 	if [[ -d gpdb_src/gpAux/gpdemo ]]; then
 		chown -R gpadmin:gpadmin gpdb_src/gpAux/gpdemo
 	fi
 
 	if grep -i ubuntu /etc/os-release; then
+		echo "export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> ~gpadmin/.bashrc
 		echo '[[ -f ~/.bashrc ]] && . ~/.bashrc' >> ~gpadmin/.bash_profile
 		chown gpadmin:gpadmin ~gpadmin/.bash_profile
+	else
+		echo "export JAVA_HOME=${JAVA_HOME}" >> ~gpadmin/.bashrc
 	fi
 }
 

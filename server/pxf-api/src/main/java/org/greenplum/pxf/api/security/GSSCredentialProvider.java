@@ -43,6 +43,7 @@ import java.util.concurrent.TimeUnit;
  * Doing this once a day does not have any overhead.
  */
 @Component
+@SuppressWarnings("removal")
 public class GSSCredentialProvider {
     private static final Logger LOG = LoggerFactory.getLogger(GSSCredentialProvider.class);
     private static final String CACHE_EXPIRATION_PROPERTY =
@@ -175,6 +176,7 @@ public class GSSCredentialProvider {
      * Get current KerberosTicket that is a TGT under the Subject running this code.
      * @return the TGT KerberosTicket
      */
+    @SuppressWarnings("removal")
     private KerberosTicket getCurrentTgt() {
         KerberosTicket tgt = pxfUgi.getTGT(Subject.getSubject(AccessController.getContext()));
         Preconditions.checkNotNull(tgt, "No TGT found in the Subject.");

@@ -1,7 +1,33 @@
-apply plugin: "java-library"
+plugins {
+    id "java-library"
+    id "maven-publish"
+}
 
 jar {
     enabled = true
+}
+
+publishing {
+    publications {
+        pxf(MavenPublication) {
+            from components.java
+            versionMapping {
+                usage('java-api') {
+                    fromResolutionOf('runtimeClasspath')
+                }
+                usage('java-runtime') {
+                    fromResolutionResult()
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = 'artifactory'
+            url = "${project.properties.artifactoryRepoUrl ?: 'http://artifactory:8080/repository/maven-releases/'}"
+            credentials(PasswordCredentials)
+        }
+    }
 }
 
 dependencies {
@@ -54,10 +80,14 @@ dependencies {
     testImplementation("org.apache.hadoop.thirdparty:hadoop-shaded-guava")
     testImplementation("com.esotericsoftware:minlog")
     testImplementation("com.esotericsoftware:reflectasm")
-    testImplementation('org.mockito:mockito-inline')
     testImplementation('org.springframework.boot:spring-boot-starter-test')
+
+    // https://projectlombok.org
+    compileOnly("org.projectlombok:lombok")
+    annotationProcessor("org.projectlombok:lombok")
 }
 
 test {
+    jvmArgs '--add-opens=java.security.jgss/sun.security.krb5=ALL-UNNAMED'
     useJUnitPlatform()
 }

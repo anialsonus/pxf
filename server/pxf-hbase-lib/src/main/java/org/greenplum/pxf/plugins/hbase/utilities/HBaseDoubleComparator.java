@@ -23,9 +23,24 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
+import org.apache.hadoop.hbase.filter.SubstringComparator;
 import org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
+/**
+ * This is a Filter comparator for HBase It is external to PXF HBase code.
+ * <p>
+ * To use with HBase it must reside in the classpath of every region server.
+ * <p>
+ * It converts a value into {@link Long} before comparing.
+ * The filter is good for any integer numeric comparison i.e. integer, bigint, smallint.
+ * <p>
+ * according to HBase 0.96 requirements, this must serialized using Protocol Buffers
+ * ({@link #toByteArray()} and {@link #parseFrom(byte[])} methods).
+ * <p>
+ * A reference can be found in {@link SubstringComparator}.
+ * This class MUST ONLY use features from java 8 and lower as it will be loaded within hbase
+ */
 public class HBaseDoubleComparator extends ByteArrayComparable {
 
     private final Double val;

@@ -4,9 +4,7 @@ import lombok.Getter;
 
 import java.util.EnumSet;
 
-import static org.greenplum.pxf.plugins.jdbc.IntervalType.DAY;
-import static org.greenplum.pxf.plugins.jdbc.IntervalType.MONTH;
-import static org.greenplum.pxf.plugins.jdbc.IntervalType.YEAR;
+import static org.greenplum.pxf.plugins.jdbc.IntervalType.*;
 
 @Getter
 public class Interval {
@@ -41,4 +39,23 @@ public class Interval {
         }
     }
 
+    public static class TimestampInterval extends Interval {
+
+        private static final EnumSet<IntervalType> TIMESTAMP_INTERVAL_TYPES = EnumSet.of(SECOND, MINUTE, HOUR, DAY, MONTH, YEAR);
+
+        public TimestampInterval(String interval) {
+            String[] intervalSplit = interval.split(":");
+            if (intervalSplit.length != 2) {
+                throw new IllegalArgumentException(
+                        "The parameter 'INTERVAL' has invalid format. The correct format for partition of type TIMESTAMP is '<interval_num>:{year|month|day|hour|minute|second}'"
+                );
+            }
+            this.value = Integer.parseInt(intervalSplit[0]);
+            String intervalType = intervalSplit[1];
+            this.type = IntervalType.typeOf(intervalType);
+            if (!TIMESTAMP_INTERVAL_TYPES.contains(type)) {
+                throw new IllegalArgumentException(String.format("Invalid timestamp interval '%s'", intervalType));
+            }
+        }
+    }
 }

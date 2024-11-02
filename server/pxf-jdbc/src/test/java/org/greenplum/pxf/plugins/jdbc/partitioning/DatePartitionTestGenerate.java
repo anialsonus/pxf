@@ -91,6 +91,7 @@ public class DatePartitionTestGenerate {
         final String RANGE = "0101-02-03 BC:10001-02-02 AD";
         final String INTERVAL = "1000:year";
         final DbProduct dbProduct = DbProduct.POSTGRES;
+        final boolean WRAP_DATE_WITH_TIME = false;
 
         DatePartition[] parts = PartitionType.DATE.generate(COLUMN, RANGE, INTERVAL, true).stream()
                 .map(p -> (DatePartition) p).toArray(DatePartition[]::new);

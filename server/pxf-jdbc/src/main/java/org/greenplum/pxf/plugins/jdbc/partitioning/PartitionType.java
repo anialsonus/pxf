@@ -24,12 +24,14 @@ import org.greenplum.pxf.plugins.jdbc.Interval;
 import org.greenplum.pxf.plugins.jdbc.IntervalType;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
 import static org.greenplum.pxf.plugins.jdbc.utils.DateTimeEraFormatters.getLocalDate;
+import static org.greenplum.pxf.plugins.jdbc.utils.DateTimeEraFormatters.getLocalDateTimeFromStringWithoutDelimiters;
 
 /**
  * The high-level partitioning feature controller.
@@ -109,6 +111,55 @@ public enum PartitionType {
         @Override
         String getValidIntervalFormat() {
             return "yyyy-mm-dd";
+        }
+    },
+    TIMESTAMP {
+        @Override
+        protected Object parseRange(String value) {
+            return getLocalDateTimeFromStringWithoutDelimiters(value);
+        }
+
+        @Override
+        Interval parseInterval(String interval) {
+            return new Interval.TimestampInterval(interval);
+        }
+
+        @Override
+        protected boolean isLessThan(Object rangeStart, Object rangeEnd) {
+            return ((LocalDateTime) rangeStart).isBefore((LocalDateTime) rangeEnd);
+        }
+
+        @Override
+        Object next(Object start, Object end, Interval interval) {
+            ChronoUnit unit;
+            if (interval.getType() == IntervalType.SECOND) {
+                unit = ChronoUnit.SECONDS;
+            } else if (interval.getType() == IntervalType.MINUTE) {
+                unit = ChronoUnit.MINUTES;
+            } else if (interval.getType() == IntervalType.HOUR) {
+                unit = ChronoUnit.HOURS;
+            } else if (interval.getType() == IntervalType.DAY) {
+                unit = ChronoUnit.DAYS;
+            } else if (interval.getType() == IntervalType.MONTH) {
+                unit = ChronoUnit.MONTHS;
+            } else if (interval.getType() == IntervalType.YEAR) {
+                unit = ChronoUnit.YEARS;
+            } else {
+                throw new RuntimeException("Unknown INTERVAL type");
+            }
+
+            LocalDateTime next = ((LocalDateTime) start).plus(interval.getValue(), unit);
+            return next.isAfter((LocalDateTime) end) ? end : next;
+        }
+
+        @Override
+        BasePartition createPartition(String column, Object start, Object end, boolean isDateWideRange) {
+            return new TimestampPartition(column, (LocalDateTime) start, (LocalDateTime) end, isDateWideRange);
+        }
+
+        @Override
+        String getValidIntervalFormat() {
+            return "yyyyMMddTHHmmss";
         }
     },
     ENUM {

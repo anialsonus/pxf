@@ -97,6 +97,31 @@ class PxfServerPropertiesTest {
         assertThat(properties.getTask().getShutdown().isAwaitTermination()).isEqualTo(true);
     }
 
+    @Test
+    public void testNestedExceptionEnabled() {
+        bind("pxf.nested-exception-enabled", "false");
+        assertThat(properties.isNestedExceptionEnabled()).isEqualTo(false);
+    }
+
+    @Test
+    public void testNestedExceptionWrappedDepth() {
+        bind("pxf.nested-exception-wrapped-depth", "15");
+        assertThat(properties.getNestedExceptionWrappedDepth()).isEqualTo(15);
+    }
+
+    @Test
+    public void testNestedExceptionTraceDepth() {
+        bind("pxf.nested-exception-trace-depth", "3");
+        assertThat(properties.getNestedExceptionTraceDepth()).isEqualTo(3);
+    }
+
+    @Test
+    public void testNestedExceptionDefaultProperties() {
+        assertThat(properties.isNestedExceptionEnabled()).isEqualTo(false);
+        assertThat(properties.getNestedExceptionWrappedDepth()).isEqualTo(1000);
+        assertThat(properties.getNestedExceptionTraceDepth()).isEqualTo(10);
+    }
+
     private void bind(String name, String value) {
         bind(Collections.singletonMap(name, value));
     }

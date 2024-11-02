@@ -1,5 +1,6 @@
 package org.greenplum.pxf.service.rest;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.service.RequestParser;
 import org.greenplum.pxf.service.controller.WriteService;
@@ -10,8 +11,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import javax.servlet.http.HttpServletRequest;
 
 /**
  * PXF REST endpoint for write data requests.

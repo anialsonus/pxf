@@ -1,6 +1,9 @@
 package org.greenplum.pxf.plugins.jdbc;
 
 public enum IntervalType {
+    SECOND,
+    MINUTE,
+    HOUR,
     DAY,
     MONTH,
     YEAR,

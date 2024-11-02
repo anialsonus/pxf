@@ -60,6 +60,7 @@ dependencies {
     implementation("org.codehaus.jackson:jackson-core-asl")          { transitive = false }
     implementation("org.codehaus.jackson:jackson-mapper-asl")        { transitive = false }
     implementation("org.jodd:jodd-core")                             { transitive = false }
+    implementation("javax.servlet:javax.servlet-api:4.0.1")          { transitive = false }
 
     // transitive dependency for reading Hive tables with SerDe 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
     implementation("net.sf.opencsv:opencsv")                         { transitive = false }
@@ -72,10 +73,14 @@ dependencies {
      *******************************/
 
     testImplementation('org.springframework.boot:spring-boot-starter-test')
-    testImplementation('org.mockito:mockito-inline')
     testImplementation("org.apache.hadoop.thirdparty:hadoop-shaded-guava")
+
+    // https://projectlombok.org
+    compileOnly("org.projectlombok:lombok")
+    annotationProcessor("org.projectlombok:lombok")
 }
 
 test {
+    jvmArgs '--add-opens=java.base/java.net=ALL-UNNAMED'
     useJUnitPlatform()
 }

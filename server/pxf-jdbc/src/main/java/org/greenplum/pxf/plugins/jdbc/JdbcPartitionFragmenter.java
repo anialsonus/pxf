@@ -50,7 +50,7 @@ public class JdbcPartitionFragmenter extends BaseFragmenter {
             column = partitionBy[0];
             partitionType = PartitionType.of(partitionBy[1]);
         } catch (ArrayIndexOutOfBoundsException e) {
-            throw new IllegalArgumentException("The parameter 'PARTITION_BY' has incorrect format. The correct format is '<column_name>:{int|date|enum}'");
+            throw new IllegalArgumentException("The parameter 'PARTITION_BY' has incorrect format. The correct format is '<column_name>:{int|date|timestamp|enum}'");
         }
 
         range = context.getOption("RANGE");

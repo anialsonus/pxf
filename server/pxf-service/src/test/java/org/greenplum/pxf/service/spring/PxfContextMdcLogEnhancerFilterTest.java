@@ -1,21 +1,18 @@
 package org.greenplum.pxf.service.spring;
 
+import jakarta.servlet.ServletException;
 import org.greenplum.pxf.service.HttpHeaderDecoder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.slf4j.spi.MDCAdapter;
+import org.slf4j.MDC;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
-import javax.servlet.ServletException;
 import java.io.IOException;
-
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class PxfContextMdcLogEnhancerFilterTest {
@@ -24,9 +21,6 @@ class PxfContextMdcLogEnhancerFilterTest {
     MockHttpServletRequest mockRequest;
     MockHttpServletResponse mockResponse;
     MockFilterChain mockFilterChain;
-
-    @Mock
-    MDCAdapter mdcMock;
 
     @BeforeEach
     void setup() {
@@ -38,57 +32,63 @@ class PxfContextMdcLogEnhancerFilterTest {
 
     @Test
     void testNonPxfContextRequest() throws ServletException, IOException {
-        filter.doFilter(mockRequest, mockResponse, mockFilterChain);
-        // always removes
-        verify(mdcMock).remove("segmentId");
-        verify(mdcMock).remove("sessionId");
-        verifyNoMoreInteractions(mdcMock);
+        try (var mdcMock = Mockito.mockStatic(MDC.class)) {
+            filter.doFilter(mockRequest, mockResponse, mockFilterChain);
+
+            // always removes
+            mdcMock.verify(() -> MDC.remove("segmentId"));
+            mdcMock.verify(() -> MDC.remove("sessionId"));
+            mdcMock.verifyNoMoreInteractions();
+        }
     }
 
     @Test
     void testPxfContextRequest() throws ServletException, IOException {
+        try (var mdcMock = Mockito.mockStatic(MDC.class)) {
+            mockRequest.addHeader("X-GP-XID", "transaction:id");
+            mockRequest.addHeader("X-GP-SEGMENT-ID", "5");
+            filter.doFilter(mockRequest, mockResponse, mockFilterChain);
 
-        mockRequest.addHeader("X-GP-XID", "transaction:id");
-        mockRequest.addHeader("X-GP-SEGMENT-ID", "5");
-        filter.doFilter(mockRequest, mockResponse, mockFilterChain);
+            mdcMock.verify(() -> MDC.put("sessionId", "transaction:id:default"));
+            mdcMock.verify(() -> MDC.put("segmentId", "5"));
 
-        verify(mdcMock).put("sessionId", "transaction:id:default");
-        verify(mdcMock).put("segmentId", "5");
-
-        verify(mdcMock).remove("segmentId");
-        verify(mdcMock).remove("sessionId");
-        verifyNoMoreInteractions(mdcMock);
+            mdcMock.verify(() -> MDC.remove("segmentId"));
+            mdcMock.verify(() -> MDC.remove("sessionId"));
+            mdcMock.verifyNoMoreInteractions();
+        }
     }
 
     @Test
     void testPxfContextRequestWithServerName() throws ServletException, IOException {
+        try (var mdcMock = Mockito.mockStatic(MDC.class)) {
+            mockRequest.addHeader("X-GP-XID", "transaction:id");
+            mockRequest.addHeader("X-GP-OPTIONS-SERVER", "s3");
+            mockRequest.addHeader("X-GP-SEGMENT-ID", "5");
+            filter.doFilter(mockRequest, mockResponse, mockFilterChain);
 
-        mockRequest.addHeader("X-GP-XID", "transaction:id");
-        mockRequest.addHeader("X-GP-OPTIONS-SERVER", "s3");
-        mockRequest.addHeader("X-GP-SEGMENT-ID", "5");
-        filter.doFilter(mockRequest, mockResponse, mockFilterChain);
+            mdcMock.verify(() -> MDC.put("sessionId", "transaction:id:s3"));
+            mdcMock.verify(() -> MDC.put("segmentId", "5"));
 
-        verify(mdcMock).put("sessionId", "transaction:id:s3");
-        verify(mdcMock).put("segmentId", "5");
-
-        verify(mdcMock).remove("segmentId");
-        verify(mdcMock).remove("sessionId");
-        verifyNoMoreInteractions(mdcMock);
+            mdcMock.verify(() -> MDC.remove("segmentId"));
+            mdcMock.verify(() -> MDC.remove("sessionId"));
+            mdcMock.verifyNoMoreInteractions();
+        }
     }
 
     @Test
     void testPxfContextEncodedRequest() throws ServletException, IOException {
+        try (var mdcMock = Mockito.mockStatic(MDC.class)) {
+            mockRequest.addHeader("X-GP-ENCODED-HEADER-VALUES", "true");
+            mockRequest.addHeader("X-GP-XID", "transaction%3Aid");
+            mockRequest.addHeader("X-GP-SEGMENT-ID", "5");
+            filter.doFilter(mockRequest, mockResponse, mockFilterChain);
 
-        mockRequest.addHeader("X-GP-ENCODED-HEADER-VALUES", "true");
-        mockRequest.addHeader("X-GP-XID", "transaction%3Aid");
-        mockRequest.addHeader("X-GP-SEGMENT-ID", "5");
-        filter.doFilter(mockRequest, mockResponse, mockFilterChain);
+            mdcMock.verify(() -> MDC.put("sessionId", "transaction:id:default"));
+            mdcMock.verify(() -> MDC.put("segmentId", "5"));
 
-        verify(mdcMock).put("sessionId", "transaction:id:default");
-        verify(mdcMock).put("segmentId", "5");
-
-        verify(mdcMock).remove("segmentId");
-        verify(mdcMock).remove("sessionId");
-        verifyNoMoreInteractions(mdcMock);
+            mdcMock.verify(() -> MDC.remove("segmentId"));
+            mdcMock.verify(() -> MDC.remove("sessionId"));
+            mdcMock.verifyNoMoreInteractions();
+        }
     }
 }

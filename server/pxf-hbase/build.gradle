@@ -21,6 +21,7 @@ dependencies {
      *******************************/
 
     implementation(project(':pxf-api'))
+    implementation(project(':pxf-hbase-lib'))
     implementation("com.google.protobuf:protobuf-java")
     implementation("commons-collections:commons-collections")
     implementation("org.apache.hbase:hbase-client")                  { transitive = false }
@@ -56,6 +57,10 @@ dependencies {
     testImplementation("com.esotericsoftware:minlog")
     testImplementation("com.esotericsoftware:reflectasm")
     testImplementation('org.springframework.boot:spring-boot-starter-test')
+
+    // https://projectlombok.org
+    compileOnly("org.projectlombok:lombok")
+    annotationProcessor("org.projectlombok:lombok")
 }
 
 test {
