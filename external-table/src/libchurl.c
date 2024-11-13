@@ -364,8 +364,13 @@ log_curl_debug(CURL *handle, curl_infotype type, char *data, size_t size, void *
 	case CURLINFO_TEXT:
 	case CURLINFO_HEADER_IN:
 	case CURLINFO_HEADER_OUT:
-		ereport(DEBUG3,
-			(errmsg("curl debug - %s%s", prefix_map[type], data)));
+		if (data[size - 1] == '\n')
+			size--;
+		if (data[size - 1] == '\r')
+			size--;
+		if (size)
+			ereport(DEBUG3,
+				(errmsg("curl debug - %s%*.*s", prefix_map[type], (int)size, (int)size, data)));
 		break;
 	case CURLINFO_DATA_IN:
 	case CURLINFO_DATA_OUT:
