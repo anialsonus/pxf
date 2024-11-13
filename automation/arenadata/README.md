@@ -49,3 +49,8 @@ docker-compose exec mdw sudo -H -u gpadmin bash -l -c 'pushd $TEST_HOME && make 
 cd pxf/automation/arenadata/hadoop/
 docker build -f Dockerfile -t cloud-hub.adsw.io/library/pxf-hadoop:3.1.3 .
 ```
+
+### Run PXF with SSL
+```shell
+docker-compose -f docker-compose-ssl.yaml up -d
+```

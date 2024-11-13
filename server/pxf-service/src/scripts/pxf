@@ -56,6 +56,12 @@ export PXF_LOGDIR=${PXF_LOGDIR:=${PXF_BASE}/logs}
 # Path to Run directory
 export PXF_RUNDIR=${PXF_RUNDIR:=${PXF_BASE}/run}
 
+# Protocol
+export PXF_PROTOCOL=${PXF_PROTOCOL:-http}
+
+# Hostname
+export PXF_HOST=${PXF_HOST:-localhost}
+
 # Port
 export PXF_PORT=${PXF_PORT:=5888}
 
@@ -128,9 +134,15 @@ function waitForSpringBoot() {
     echo_after_attempts=$2 # only start echoing after this number of attempts
     sleep_time=1 # sleep 1 second between attempts
 
+    if [[ "$PXF_PROTOCOL" = "https" ]]; then
+      curl_command="$curl --cacert ${PXF_SSL_CACERT_PATH} --cert ${PXF_SSL_CERT} --key ${PXF_SSL_KEY} --silent --connect-timeout 1 -I ${PXF_PROTOCOL}://${PXF_HOST}:${PXF_PORT}"
+    else
+      curl_command="$curl --silent --connect-timeout 1 -I ${PXF_PROTOCOL}://${PXF_HOST}:${PXF_PORT}"
+    fi
+
     # wait until spring boot is up:
     echoYellow 'Checking if PXF is up and running...'
-    until $curl --silent --connect-timeout 1 -I "http://localhost:$PXF_PORT" | grep 'PXF Server' > /dev/null; do
+    until $curl_command | grep 'PXF Server' > /dev/null; do
         if (( ++attempts == max_attempts )); then
             echoRed 'ERROR: PXF is down - the application is not running'
             return 1
@@ -151,7 +163,13 @@ function waitForSpringBoot() {
 function checkWebapp() {
     waitForSpringBoot "$1" "$2" || return 1
 
-    curlResponse=$($curl -s "http://localhost:${PXF_PORT}/actuator/health")
+    if [[ "$PXF_SSL_ENABLED" = true ]]; then
+      curl_response_command="$curl -s --cacert ${PXF_SSL_CACERT_PATH} --cert ${PXF_SSL_CERT} --key ${PXF_SSL_KEY} ${PXF_PROTOCOL}://${PXF_HOST}:${PXF_PORT}/actuator/health"
+    else
+      curl_response_command="$curl -s ${PXF_PROTOCOL}://${PXF_HOST}:${PXF_PORT}/actuator/health"
+    fi
+
+    curlResponse=$($curl_response_command)
 
     [[ $curlResponse == {\"status\":\"UP\"* ]] || fail "PXF is inaccessible. Check logs ($PXF_LOGDIR) for more information"
     return 0

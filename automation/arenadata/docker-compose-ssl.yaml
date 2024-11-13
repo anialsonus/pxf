@@ -1,0 +1,138 @@
+version: "3"
+services:
+  vault:
+    image: "hub.adsw.io/pxf/pxf-vault-test:it"
+    restart: on-failure
+    ports:
+      - "8200:8200"
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - ./vault/certs:/certs:ro
+      - ./vault/scripts:/scripts:ro
+      - ./vault/secrets:/secrets:ro
+      - vault-env:/env:rw
+    entrypoint: [ "bash", "-c", "/scripts/workflow-vault.sh" ]
+
+  mdw:
+    image: "gpdb6_pxf_automation:it"
+    restart: unless-stopped
+    working_dir: /home/gpadmin
+    hostname: mdw
+    ports:
+      - "5435:5432"
+      - "5005:5005"
+    environment:
+      - HOSTNAME=mdw
+      - DOCKER_GP_CLUSTER_HOSTS=mdw,sdw1,sdw2
+      - DOCKER_GP_MASTER_SERVER=mdw
+      - DOCKER_GP_SEGMENT_SERVERS=sdw1,sdw2
+      - DOCKER_GP_PRIMARY_SEGMENTS_PER_HOST=3
+      - DOCKER_GP_WITH_MIRROR=false
+      - PXF_PROTOCOL=https
+      - PXF_HOST=mdw
+      - PXF_VAULT_ENABLED=true
+      - PXF_VAULT_SECRET_PATH=adb/adb-it/service/pxf
+      - PXF_SSL_ENABLED=true
+      - PXF_SSL_KEY_STORE_PATH=/opt/ssl/certs/pxf.jks
+      - PXF_SSL_TRUST_STORE_PATH=/opt/ssl/certs/pxf.jks
+      - PXF_SSL_CLIENT_AUTH=NEED
+      - PXF_SSL_CACERT_PATH=/opt/ssl/certs/ca-cert
+      - PXF_SSL_CERT=/opt/ssl/certs/pxf-client.pem
+      - PXF_SSL_KEY=/opt/ssl/certs/pxf-client.key
+    volumes:
+      - "vault-env:/vault/env:ro"
+      - "./conf/ssl/certs:/opt/ssl/certs:ro"
+    healthcheck:
+      test:  sudo -H -u gpadmin bash -l -c "psql -d postgres -U gpadmin -Atc 'SELECT 1;'"
+      interval: 30s
+      timeout: 15s
+      retries: 3
+    depends_on:
+      - sdw1
+    privileged: true
+    sysctls:
+      kernel.sem: 500 1024000 200 4096
+      net.unix.max_dgram_qlen: 4096
+
+  sdw1:
+    image: "gpdb6_pxf_automation:it"
+    restart: unless-stopped
+    privileged: true
+    hostname: sdw1
+    ports:
+      - "8001:8000"
+    environment:
+      - HOSTNAME=sdw1
+      - DOCKER_GP_CLUSTER_HOSTS=mdw,sdw1,sdw2
+      - DOCKER_GP_MASTER_SERVER=mdw
+      - DOCKER_GP_SEGMENT_SERVERS=sdw1,sdw2
+      - DOCKER_GP_PRIMARY_SEGMENTS_PER_HOST=3
+      - DOCKER_GP_WITH_MIRROR=false
+      - PXF_PROTOCOL=https
+      - PXF_HOST=sdw1
+      - PXF_VAULT_ENABLED=true
+      - PXF_VAULT_SECRET_PATH=adb/adb-it/service/pxf
+      - PXF_SSL_ENABLED=true
+      - PXF_SSL_KEY_STORE_PATH=/opt/ssl/certs/pxf.jks
+      - PXF_SSL_TRUST_STORE_PATH=/opt/ssl/certs/pxf.jks
+      - PXF_SSL_CLIENT_AUTH=NEED
+      - PXF_SSL_CACERT_PATH=/opt/ssl/certs/ca-cert
+      - PXF_SSL_CERT=/opt/ssl/certs/pxf-client.pem
+      - PXF_SSL_KEY=/opt/ssl/certs/pxf-client.key
+    volumes:
+      - "vault-env:/vault/env:ro"
+      - "./conf/ssl/certs:/opt/ssl/certs:ro"
+    healthcheck:
+      test:  netstat -an | grep 5888 > /dev/null; if [ 0 != $$? ]; then exit 1; fi;
+      interval: 30s
+      timeout: 15s
+      retries: 3
+    sysctls:
+      kernel.sem: 500 1024000 200 4096
+      net.unix.max_dgram_qlen: 4096
+
+  sdw2:
+    image: "gpdb6_pxf_automation:it"
+    restart: unless-stopped
+    privileged: true
+    hostname: sdw2
+    ports:
+      - "8002:8000"
+    environment:
+      - HOSTNAME=sdw2
+      - DOCKER_GP_CLUSTER_HOSTS=mdw,sdw1,sdw2
+      - DOCKER_GP_MASTER_SERVER=mdw
+      - DOCKER_GP_SEGMENT_SERVERS=sdw1,sdw2
+      - DOCKER_GP_PRIMARY_SEGMENTS_PER_HOST=3
+      - DOCKER_GP_WITH_MIRROR=false
+      - PXF_PROTOCOL=https
+      - PXF_HOST=sdw2
+      - PXF_VAULT_ENABLED=true
+      - PXF_VAULT_SECRET_PATH=adb/adb-it/service/pxf
+      - PXF_SSL_ENABLED=true
+      - PXF_SSL_KEY_STORE_PATH=/opt/ssl/certs/pxf.jks
+      - PXF_SSL_TRUST_STORE_PATH=/opt/ssl/certs/pxf.jks
+      - PXF_SSL_CLIENT_AUTH=NEED
+      - PXF_SSL_CACERT_PATH=/opt/ssl/certs/ca-cert
+      - PXF_SSL_CERT=/opt/ssl/certs/pxf-client.pem
+      - PXF_SSL_KEY=/opt/ssl/certs/pxf-client.key
+    volumes:
+      - "vault-env:/vault/env:ro"
+      - "./conf/ssl/certs:/opt/ssl/certs:ro"
+    healthcheck:
+      test: netstat -an | grep 5888 > /dev/null; if [ 0 != $$? ]; then exit 1; fi;
+      interval: 30s
+      timeout: 15s
+      retries: 3
+    sysctls:
+      kernel.sem: 500 1024000 200 4096
+      net.unix.max_dgram_qlen: 4096
+
+networks:
+  default:
+    name: pxf-automation
+
+volumes:
+  m2:
+  vault-env:

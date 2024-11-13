@@ -43,6 +43,7 @@ dependencies {
     //implementation('org.springframework.cloud:spring-cloud-starter-netflix-eureka-client:3.1.7')
     implementation("com.univocity:univocity-parsers")
     implementation("org.springframework:spring-web")
+    implementation("org.springframework.cloud:spring-cloud-starter-vault-config:${springCloudVaultVersion}")
 
     implementation("org.apache.hadoop:hadoop-hdfs-client")           { transitive = false }
     implementation("org.apache.hadoop:hadoop-auth")                  { transitive = false }

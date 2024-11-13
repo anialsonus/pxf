@@ -43,9 +43,10 @@ RUN set -eux; \
            yum -y install /tmp/jdk-17.0.12_linux-x64_bin.rpm && \
            rm -rf /tmp/jdk-17.0.12_linux-x64_bin.rpm; \
          sed -i "s/JAVA_HOME=.*/JAVA_HOME=\$(readlink -f \/usr\/bin\/java | sed 's:bin\/java::')/g" /etc/profile.d/jdk_home.sh; \
+         yum install -y ksh; \
          ;; \
        ubuntu*) \
-         apt-get -y update && apt-get install -y unzip vim nano openjdk-17-jdk; \
+         apt-get -y update && apt-get install -y unzip vim nano openjdk-17-jdk ksh; \
          update-locale LANG=en_US.UTF-8; \
          ;; \
     esac;
@@ -82,6 +83,9 @@ ENV PXF_HOME=/usr/local/greenplum-db-devel/pxf
 RUN localedef -c -i ru_RU -f CP1251 ru_RU.CP1251
 RUN cp ${PXF_HOME}/templates/*-site.xml ${PXF_HOME}/servers/default/
 
+# Copy pxf-application.properties
+COPY ./automation/arenadata/conf/pxf-application.properties ${PXF_HOME}/conf/pxf-application.properties
+
 # Need to change ssh key to RSA for automation tests with Ubuntu
 RUN set -eux; \
     . /etc/os-release; \
@@ -98,6 +102,6 @@ RUN set -eux; \
 # Move libs to the destination folder
 RUN cp /tmp/libs/* ${PXF_HOME}/lib/
 
-RUN chmod a+x ./pxf_src/automation/arenadata/scripts/start_adb_cluster.sh
+RUN chmod -R a+x ./pxf_src/automation/arenadata/scripts
 RUN chown -R gpadmin:gpadmin /usr/local/greenplum-db-devel
 ENTRYPOINT ["/home/gpadmin/pxf_src/automation/arenadata/scripts/start_adb_cluster.sh"]

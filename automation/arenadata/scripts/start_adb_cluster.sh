@@ -9,6 +9,23 @@ segid=0
 is_mirrored=$DOCKER_GP_WITH_MIRROR
 primary_segments_per_host=$DOCKER_GP_PRIMARY_SEGMENTS_PER_HOST
 
+# Wait Vault service
+if [[ "$PXF_VAULT_ENABLED" = true ]]; then
+    echo "--------------------------"
+    echo "Wait Vault service for PXF"
+    echo "--------------------------"
+    role_id_file="/vault/env/role_id"
+    secret_id_file="/vault/env/secret_id"
+    while [ ! -f "$role_id_file" ] || [ ! -f "$secret_id_file" ]; do
+      echo "Waiting for vault init approle envs"
+      sleep 1
+    done
+    # Read the role_id and secret_id from the shared volume
+    export PXF_VAULT_ROLE_ID=$(cat "$role_id_file")
+    export PXF_VAULT_SECRET_ID=$(cat "$secret_id_file")
+    echo "Vault environment were initialized successfully"
+fi
+
 # Base config
 CONFIG="ARRAY_NAME='Demo Greenplum Cluster'
 TRUSTED_SHELL=ssh
@@ -84,9 +101,9 @@ bash -c "/usr/sbin/sshd"
 chown -R gpadmin:gpadmin /home/gpadmin/.m2/
 
 # Get ssh public keys of hosts
-echo "**********************************"
+echo "----------------------------"
 echo "Get ssh public keys of hosts"
-echo "**********************************"
+echo "----------------------------"
 keys=()
 max_iterations=10
 wait_seconds=3
@@ -138,9 +155,9 @@ do
 done
 
 # Create config files
-echo "**********************************************"
+echo "----------------------------------------------"
 echo "Copy keys, set bash profile and create configs"
-echo "**********************************************"
+echo "----------------------------------------------"
 for key in "${keys[@]}"
 do
   bash -c "echo $key >> /home/gpadmin/.ssh/known_hosts"
@@ -169,16 +186,43 @@ if [ "$HOSTNAME" == "$DOCKER_GP_MASTER_SERVER" ]; then
     echo "----------------------------------"
     echo "Run Greenplum cluster installation"
     echo "----------------------------------"
+
+    echo "--------------------"
+    echo "Check SSH connection"
+    echo "--------------------"
+    max_iterations=60
+    wait_seconds=5
+    iterations=0
+    while true
+    do
+      ((iterations++))
+      echo "Try to connect to the hosts by ssh. Attempt $iterations"
+      all_available=1
+      for server in $DOCKER_GP_CLUSTER_HOSTS
+      do
+        status=$(sudo -H -u gpadmin bash -c "ssh -o PasswordAuthentication=no $server 'exit'")
+        if [ $? -eq 0 ]; then
+          echo "Server $server is available by ssh"
+        else
+          echo "Failed to connect to $server by ssh"
+          all_available=0
+        fi
+      done
+      if [ $all_available -eq 1 ]; then
+        echo "All ADB servers are available by ssh"
+        break
+      elif [ "$iterations" -ge "$max_iterations" ]; then
+        echo "Failed to connect to some ADB server by ssh after $max_iterations tries. Exit from script!"
+        exit 1
+      fi
+    sleep $wait_seconds
+    done
+
+    echo "-------------------------"
+    echo "Install Greenplum cluster"
+    echo "-------------------------"
     sudo -H -u gpadmin bash -c "source /home/gpadmin/.bash_profile &&
         /usr/local/greenplum-db-devel/bin/gpinitsystem -a -I /home/gpadmin/gpdb_src/gpAux/gpdemo/create_cluster.conf -l /home/gpadmin/gpAdminLogs"
-    sudo -H -u gpadmin bash -c "source /home/gpadmin/.bash_profile &&
-        psql -d postgres -Atc 'CREATE EXTENSION IF NOT EXISTS pxf;' &&
-        psql -d postgres -Atc 'CREATE EXTENSION IF NOT EXISTS pxf_fdw;' &&
-        echo 'local all testuser trust' >> /data1/master/gpseg-1/pg_hba.conf &&
-        echo 'host all gpadmin 0.0.0.0/0 trust' >> /data1/master/gpseg-1/pg_hba.conf &&
-        echo 'host all all 0.0.0.0/0 md5' >> /data1/master/gpseg-1/pg_hba.conf &&
-        gpconfig -c gp_resource_manager -v group &&
-        gpstop -aM fast && gpstart -a"
 
     # Check cluster
     echo "-------------------------------------"
@@ -202,6 +246,18 @@ if [ "$HOSTNAME" == "$DOCKER_GP_MASTER_SERVER" ]; then
       echo "-------------------------------------"
       exit 1;
     fi
+
+    echo "---------------------------------------------------"
+    echo "Configuration and installation Greenplum extensions"
+    echo "---------------------------------------------------"
+    sudo -H -u gpadmin bash -c "source /home/gpadmin/.bash_profile &&
+        psql -d postgres -Atc 'CREATE EXTENSION IF NOT EXISTS pxf;' &&
+        psql -d postgres -Atc 'CREATE EXTENSION IF NOT EXISTS pxf_fdw;' &&
+        echo 'local all testuser trust' >> /data1/master/gpseg-1/pg_hba.conf &&
+        echo 'host all gpadmin 0.0.0.0/0 trust' >> /data1/master/gpseg-1/pg_hba.conf &&
+        echo 'host all all 0.0.0.0/0 md5' >> /data1/master/gpseg-1/pg_hba.conf &&
+        gpconfig -c gp_resource_manager -v group &&
+        gpstop -aM fast && gpstart -a"
   else
     echo "-------------------------"
     echo "Starting Greenplum server"
@@ -232,6 +288,23 @@ do
   echo "---------"
   echo "Start PXF"
   echo "---------"
+  # Init Vault environment
+  if [[ "$PXF_VAULT_ENABLED" = true ]]; then
+      echo "----------------------------------------"
+      echo "Init Vault env variables for PXF service"
+      echo "----------------------------------------"
+      ksh -c env | grep -E 'PXF_VAULT' | sed 's/^/export /' >> /home/gpadmin/.bash_profile
+      ksh -c env | grep -E 'PXF_VAULT' | sed 's/^/export /' >> /home/gpadmin/.bashrc
+  fi
+  # Init SSL environment
+  if [[ "$PXF_PROTOCOL" = "https" ]]; then
+    echo "--------------------------------------"
+    echo "Init SSL env variables for PXF service"
+    echo "--------------------------------------"
+    ksh -c env | grep -E 'PXF_SSL|PXF_HOST|PXF_PROTOCOL' | sed 's/^/export /' >> /home/gpadmin/.bash_profile
+    ksh -c env | grep -E 'PXF_SSL|PXF_HOST|PXF_PROTOCOL' | sed 's/^/export /' >> /home/gpadmin/.bashrc
+  fi
+
   if [ "$HOSTNAME" == "$DOCKER_GP_MASTER_SERVER" ]; then
     sudo -H -u gpadmin bash -c -l "pxf start && tail -f /data1/master/gpseg-1/pg_log/gpdb-*.csv"
   else

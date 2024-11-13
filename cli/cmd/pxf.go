@@ -22,8 +22,8 @@ const (
 	// For pxf migrate
 	pxfConf envVar = "PXF_CONF"
 	// For pxf profile reload
-	pxfHost envVar = "PXF_HOST"
-	pxfPort envVar = "PXF_PORT"
+	pxfProtocol envVar = "PXF_PROTOCOL"
+	pxfPort     envVar = "PXF_PORT"
 )
 
 type messageType int
@@ -75,17 +75,28 @@ func (cmd *command) GetFunctionToExecute() (func(string) string, error) {
 				inputs[pxfBase])
 		}, nil
 	case reload:
+		pxfDefaultProtocol := "http"
 		pxfDefaultHost := "localhost"
 		pxfDefaultPort := "5888"
+		var pxfProtocolStr string
 		var pxfHostStr string
 		var pxfPortStr string
-		reloadCommandTemplate := "curl --silent --fail --show-error --request POST http://%s:%s/pxf/reload --header \"Content-Type: application/json\" --data '{\"profile\":\"%s\",\"server\":\"%s\"}'"
 
-		// Set pxf host
-		pxfHostStr, isPxfHostSet := os.LookupEnv(string(pxfHost))
-		if !isPxfHostSet {
-			pxfHostStr = pxfDefaultHost
+		// Set pxf protocol
+		pxfProtocolStr, isPxfProtocolSet := os.LookupEnv(string(pxfProtocol))
+		if !isPxfProtocolSet {
+			pxfProtocolStr = pxfDefaultProtocol
 		}
+
+		reloadCommandTemplate := ""
+		if pxfProtocolStr == "https" {
+			reloadCommandTemplate = "curl -k --cacert ${PXF_SSL_CACERT_PATH} --cert ${PXF_SSL_CERT} --key ${PXF_SSL_KEY} --silent --fail --show-error --request POST %s://%s:%s/pxf/reload --header \"Content-Type: application/json\" --data '{\"profile\":\"%s\",\"server\":\"%s\"}'"
+		} else {
+			reloadCommandTemplate = "curl --silent --fail --show-error --request POST %s://%s:%s/pxf/reload --header \"Content-Type: application/json\" --data '{\"profile\":\"%s\",\"server\":\"%s\"}'"
+		}
+
+		// Set pxf host to localhost as we cannot run curl remotely for security reason
+		pxfHostStr = pxfDefaultHost
 
 		// Set pxf port
 		pxfPortStr, isPxfPortSet := os.LookupEnv(string(pxfPort))
@@ -93,7 +104,7 @@ func (cmd *command) GetFunctionToExecute() (func(string) string, error) {
 			pxfPortStr = pxfDefaultPort
 		}
 
-		reloadCommand := fmt.Sprintf(reloadCommandTemplate, pxfHostStr, pxfPortStr, ReloadProfileName, ReloadServerName)
+		reloadCommand := fmt.Sprintf(reloadCommandTemplate, pxfProtocolStr, pxfHostStr, pxfPortStr, ReloadProfileName, ReloadServerName)
 		if !ReloadAutoConfirm {
 			cmd.warn = true
 			err := cmd.Warn(os.Stdin)

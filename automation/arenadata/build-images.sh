@@ -15,6 +15,11 @@ popd
 #docker build -f Dockerfile -t cloud-hub.adsw.io/library/pxf-hadoop:3.3.6 .
 #popd
 
+#echo "===================================="
+#echo "      Build Vault image      "
+#echo "===================================="
+docker build -f ./vault/Dockerfile -t hub.adsw.io/pxf/pxf-vault-test:it .
+
 echo "=============================="
 echo "Build PXF image for automation"
 echo "=============================="
