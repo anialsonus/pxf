@@ -166,4 +166,90 @@ public class DbProductTest {
             assertEquals(expected[i], dbProduct.wrapDate(String.valueOf(DATES[i])));
         }
     }
+
+    @Test
+    public void testOracleWrapTimestampWithTZ() {
+        String[] timestampsTZ = {
+                "1985-05-11 15:10:00.12+03",
+                "1985-05-12 15:10:00.123+05:30",
+                "1985-05-13 15:10:00.1234+3",
+                "1985-05-14 15:10:00-04:45",
+
+        };
+        final String[] expected = {
+                "to_timestamp_tz('1985-05-11 15:10:00.12+03', 'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM')",
+                "to_timestamp_tz('1985-05-12 15:10:00.123+05:30', 'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM')",
+                "to_timestamp_tz('1985-05-13 15:10:00.1234+3', 'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM')",
+                "to_timestamp_tz('1985-05-14 15:10:00-04:45', 'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM')",
+        };
+        DbProduct dbProduct = DbProduct.getDbProduct(DB_NAME_ORACLE);
+        for (int i = 0; i < DATES.length; i++) {
+            assertEquals(expected[i], dbProduct.wrapTimestampWithTZ(timestampsTZ[i]));
+        }
+    }
+
+    @Test
+    public void testMicrosoftWrapTimestampWithTZ() {
+        String[] timestampsTZ = {
+                "1985-05-11 15:10:00.12+03",
+                "1985-05-12 15:11:00.123+05:30",
+                "1985-05-13 15:12:00.1234+3",
+                "1985-05-14 15:13:00-04:45",
+                "1985-05-15 15:14:00-04",
+
+        };
+        final String[] expected = {
+                "CONVERT(DATETIMEOFFSET, '1985-05-11T15:10:00.120+03:00')",
+                "CONVERT(DATETIMEOFFSET, '1985-05-12T15:11:00.123+05:30')",
+                "CONVERT(DATETIMEOFFSET, '1985-05-13T15:12:00.1234+03:00')",
+                "CONVERT(DATETIMEOFFSET, '1985-05-14 15:13:00.000-04:45')",
+                "CONVERT(DATETIMEOFFSET, '1985-05-15 15:14:00.000-04:00')"
+        };
+        DbProduct dbProduct = DbProduct.getDbProduct(DB_NAME_MICROSOFT);
+        for (int i = 0; i < DATES.length; i++) {
+            assertEquals(expected[i], dbProduct.wrapTimestampWithTZ(timestampsTZ[i]));
+        }
+    }
+
+    @Test
+    public void testPostgresWrapTimestampWithTZ() {
+        String[] timestampsTZ = {
+                "1985-05-11 15:10:00.12+03",
+                "1985-05-12 15:10:00.123+05:30",
+                "1985-05-13 15:10:00.1234+3",
+                "1985-05-14 15:10:00-04:45",
+
+        };
+        final String[] expected = {
+                "'1985-05-11 15:10:00.12+03'",
+                "'1985-05-12 15:10:00.123+05:30'",
+                "1985-05-13 15:10:00.1234+3'",
+                "'1985-05-14 15:10:00-04:45'",
+        };
+        DbProduct dbProduct = DbProduct.POSTGRES;
+        for (int i = 0; i < DATES.length; i++) {
+            assertEquals(expected[i], dbProduct.wrapTimestampWithTZ(timestampsTZ[i]));
+        }
+    }
+
+    @Test
+    public void testUnknownWrapTimestampWithTZ() {
+        String[] timestampsTZ = {
+                "1985-05-11 15:10:00.12+03",
+                "1985-05-12 15:10:00.123+05:30",
+                "1985-05-13 15:10:00.1234+3",
+                "1985-05-14 15:10:00-04:45",
+
+        };
+        final String[] expected = {
+                "'1985-05-11 15:10:00.12+03'",
+                "'1985-05-12 15:10:00.123+05:30'",
+                "1985-05-13 15:10:00.1234+3'",
+                "'1985-05-14 15:10:00-04:45'",
+        };
+        DbProduct dbProduct = DbProduct.getDbProduct(DB_NAME_UNKNOWN);
+        for (int i = 0; i < DATES.length; i++) {
+            assertEquals(expected[i], dbProduct.wrapTimestampWithTZ(timestampsTZ[i]));
+        }
+    }
 }

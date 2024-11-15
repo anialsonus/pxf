@@ -40,6 +40,7 @@ public class JdbcPredicateBuilder extends ColumnPredicateBuilder {
 
     private final DbProduct dbProduct;
     private boolean wrapDateWithTime = false;
+    private boolean isDateWideRange;
 
     public JdbcPredicateBuilder(DbProduct dbProduct,
                                 List<ColumnDescriptor> tupleDescription) {
@@ -56,10 +57,12 @@ public class JdbcPredicateBuilder extends ColumnPredicateBuilder {
     public JdbcPredicateBuilder(DbProduct dbProduct,
                                 String quoteString,
                                 List<ColumnDescriptor> tupleDescription,
-                                boolean wrapDateWithTime) {
+                                boolean wrapDateWithTime,
+                                boolean isDateWideRange) {
         super(quoteString, tupleDescription);
         this.dbProduct = dbProduct;
         this.wrapDateWithTime = wrapDateWithTime;
+        this.isDateWideRange = isDateWideRange;
     }
 
     @Override
@@ -97,6 +100,14 @@ public class JdbcPredicateBuilder extends ColumnPredicateBuilder {
                     return dbProduct.wrapDateWithTime(value);
                 } else {
                     return dbProduct.wrapTimestamp(value);
+                }
+            case TIMESTAMP_WITH_TIME_ZONE:
+                // We support TIMESTAMP_WITH_TIME_ZONE only when isDateWideRange=true
+                if (isDateWideRange) {
+                    return dbProduct.wrapTimestampWithTZ(value);
+                } else {
+                    throw new UnsupportedOperationException(String.format(
+                            "'%s' is not supported fo filtering without additional property. Try to use the property DATE_WIDE_RANGE=true", type));
                 }
             default:
                 throw new UnsupportedOperationException(String.format(
