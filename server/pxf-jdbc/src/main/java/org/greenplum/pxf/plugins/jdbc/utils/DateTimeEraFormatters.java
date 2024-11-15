@@ -25,6 +25,16 @@ public class DateTimeEraFormatters {
             .appendLiteral(" ")
             .appendText(ChronoField.ERA, TextStyle.SHORT)
             .toFormatter();
+
+    /**
+     * Signifies the Time Zone
+     * +H:mm:ss - hour, with minute if non-zero or with minute and second if non-zero, with colon
+     * Examples: "-5", "+03", "-03:30", "+04:15"
+     */
+    public final static DateTimeFormatter TIME_ZONE_FORMATTER = new DateTimeFormatterBuilder()
+            .appendOffset("+H:mm","+00:00")
+            .toFormatter();
+
     /**
      * Used to parse String to LocalDateTime.
      * Examples: "1980-08-10 17:10:20" -> 1980-08-10T17:10:20; "123456-10-19 11:12:13" -> +123456-10-19T11:12:13;
@@ -75,6 +85,20 @@ public class DateTimeEraFormatters {
             .appendValue(ChronoField.MONTH_OF_YEAR, 2).appendLiteral('-')
             .appendValue(ChronoField.DAY_OF_MONTH, 2).appendLiteral(" ")
             .append(ISO_OFFSET_TIME)
+            .appendOptional(ERA_FORMATTER)
+            .toFormatter()
+            .withLocale(Locale.ROOT);
+    /**
+     * Used to format String to OffsetDateTime.
+     * Examples: "2024-11-13 21:01:02.95+3" -> "2024-11-13T21:01:02.95+03:00"; "2015-10-11 15:00:00.9+05" -> "2015-10-11T15:00:00.9+05:00";
+     * "2015-10-11 15:00:00.9-03:30" -> "2015-10-11T15:00:00.9-03:30"; "2018-04-03 18:10:23.956789+00" -> "2018-04-03T18:10:23.956789Z"
+     */
+    public static final DateTimeFormatter OFFSET_DATE_TIME_WITH_TIME_ZONE_FORMATTER = new DateTimeFormatterBuilder()
+            .appendValue(ChronoField.YEAR_OF_ERA, 4, 9, SignStyle.NORMAL).appendLiteral("-")
+            .appendValue(ChronoField.MONTH_OF_YEAR, 2).appendLiteral('-')
+            .appendValue(ChronoField.DAY_OF_MONTH, 2).appendLiteral(" ")
+            .append(ISO_LOCAL_TIME)
+            .append(TIME_ZONE_FORMATTER)
             .appendOptional(ERA_FORMATTER)
             .toFormatter()
             .withLocale(Locale.ROOT);

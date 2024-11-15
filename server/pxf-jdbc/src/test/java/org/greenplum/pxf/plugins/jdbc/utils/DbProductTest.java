@@ -28,11 +28,13 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 
 public class DbProductTest {
     private static final Date[] DATES = new Date[1];
     private static final Timestamp[] TIMESTAMPS = new Timestamp[1];
+
     static {
         try {
             DATES[0] = new Date(
@@ -41,8 +43,7 @@ public class DbProductTest {
             TIMESTAMPS[0] = new Timestamp(
                     new SimpleDateFormat("yyyy-MM-dd").parse("2001-01-01 00:00:00").getTime()
             );
-        }
-        catch (ParseException e) {
+        } catch (ParseException e) {
             DATES[0] = null;
             TIMESTAMPS[0] = null;
         }
@@ -51,8 +52,23 @@ public class DbProductTest {
     private static final String DB_NAME_UNKNOWN = "no such database";
 
     @Test
+    public void testGetDbProduct() {
+        assertEquals(DbProduct.MICROSOFT, DbProduct.getDbProduct("MICROSOFT", true));
+        assertEquals(DbProduct.MYSQL, DbProduct.getDbProduct("MYSQL", true));
+        assertEquals(DbProduct.ORACLE, DbProduct.getDbProduct("ORACLE", true));
+        assertEquals(DbProduct.S3_SELECT, DbProduct.getDbProduct("S3 SELECT", true));
+        assertEquals(DbProduct.SYBASE, DbProduct.getDbProduct("ADAPTIVE SERVER ENTERPRISE", true));
+        assertEquals(DbProduct.POSTGRES, DbProduct.getDbProduct("POSTGRESQL", true));
+    }
+
+    @Test
     public void testUnknownProductIsPostgresProduct() {
-        assertEquals(DbProduct.POSTGRES, DbProduct.getDbProduct(DB_NAME_UNKNOWN));
+        assertEquals(DbProduct.POSTGRES, DbProduct.getDbProduct(DB_NAME_UNKNOWN, true));
+    }
+
+    @Test
+    public void testUnknownProductIsOtherProduct() {
+        assertEquals(DbProduct.OTHER, DbProduct.getDbProduct(DB_NAME_UNKNOWN, false));
     }
 
     /**
@@ -62,7 +78,7 @@ public class DbProductTest {
     public void testUnknownDates() {
         final String[] expected = {"date'2001-01-01'"};
 
-        DbProduct dbProduct = DbProduct.getDbProduct(DB_NAME_UNKNOWN);
+        DbProduct dbProduct = DbProduct.getDbProduct(DB_NAME_UNKNOWN, true);
 
         for (int i = 0; i < DATES.length; i++) {
             assertEquals(expected[i], dbProduct.wrapDate(String.valueOf(DATES[i])));
@@ -74,7 +90,7 @@ public class DbProductTest {
      */
     @Test
     public void testUnknownLocalDate() {
-        DbProduct dbProduct = DbProduct.getDbProduct(DB_NAME_UNKNOWN);
+        DbProduct dbProduct = DbProduct.getDbProduct(DB_NAME_UNKNOWN, true);
         assertEquals("date'2001-03-04'", dbProduct.wrapDate(LocalDate.of(2001, 3, 4), false));
         assertEquals("date'2001-03-04 AD'", dbProduct.wrapDate(LocalDate.of(2001, 3, 4), true));
         assertEquals("date'99999-03-04 AD'", dbProduct.wrapDate(LocalDate.of(99999, 3, 4), true));
@@ -88,7 +104,7 @@ public class DbProductTest {
     public void testUnknownTimestamps() {
         final String[] expected = {"'2001-01-01 00:00:00.0'"};
 
-        DbProduct dbProduct = DbProduct.getDbProduct(DB_NAME_UNKNOWN);
+        DbProduct dbProduct = DbProduct.getDbProduct(DB_NAME_UNKNOWN, true);
 
         for (int i = 0; i < TIMESTAMPS.length; i++) {
             assertEquals(expected[i], dbProduct.wrapTimestamp(String.valueOf(TIMESTAMPS[i])));
@@ -102,7 +118,7 @@ public class DbProductTest {
     public void testOracleDates() {
         final String[] expected = {"to_date('2001-01-01', 'YYYY-MM-DD')"};
 
-        DbProduct dbProduct = DbProduct.getDbProduct(DB_NAME_ORACLE);
+        DbProduct dbProduct = DbProduct.ORACLE;
 
         for (int i = 0; i < DATES.length; i++) {
             assertEquals(expected[i], dbProduct.wrapDate(String.valueOf(DATES[i])));
@@ -111,7 +127,7 @@ public class DbProductTest {
 
     @Test
     public void testOracleLocalDate() {
-        DbProduct dbProduct = DbProduct.getDbProduct(DB_NAME_ORACLE);
+        DbProduct dbProduct = DbProduct.ORACLE;
         assertEquals("to_date('2001-03-04', 'YYYY-MM-DD')", dbProduct.wrapDate(LocalDate.of(2001, 3, 4), false));
         assertEquals("to_date('2001-03-04', 'YYYY-MM-DD')", dbProduct.wrapDate(LocalDate.of(2001, 3, 4), true));
         assertEquals("to_date('-0500-03-04', 'YYYY-MM-DD')", dbProduct.wrapDate(LocalDate.of(-500, 3, 4), true));
@@ -121,7 +137,7 @@ public class DbProductTest {
     public void testOracleDatesWithTime() {
         final String[] expected = {"to_date('2001-01-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS')"};
 
-        DbProduct dbProduct = DbProduct.getDbProduct(DB_NAME_ORACLE);
+        DbProduct dbProduct = DbProduct.ORACLE;
 
         for (int i = 0; i < TIMESTAMPS.length; i++) {
             assertEquals(expected[i], dbProduct.wrapDateWithTime(String.valueOf(TIMESTAMPS[i])));
@@ -132,38 +148,104 @@ public class DbProductTest {
     public void testOracleTimestamps() {
         final String[] expected = {"to_timestamp('2001-01-01 00:00:00.0', 'YYYY-MM-DD HH24:MI:SS.FF')"};
 
-        DbProduct dbProduct = DbProduct.getDbProduct(DB_NAME_ORACLE);
+        DbProduct dbProduct = DbProduct.ORACLE;
 
         for (int i = 0; i < TIMESTAMPS.length; i++) {
             assertEquals(expected[i], dbProduct.wrapTimestamp(String.valueOf(TIMESTAMPS[i])));
         }
     }
 
-
-    private static final String DB_NAME_MICROSOFT = "MICROSOFT";
-
     @Test
     public void testMicrosoftDates() {
         final String[] expected = {"'2001-01-01'"};
 
-        DbProduct dbProduct = DbProduct.getDbProduct(DB_NAME_MICROSOFT);
+        DbProduct dbProduct = DbProduct.MICROSOFT;
 
         for (int i = 0; i < DATES.length; i++) {
             assertEquals(expected[i], dbProduct.wrapDate(String.valueOf(DATES[i])));
         }
     }
 
-
-    private static final String DB_NAME_MYSQL = "MYSQL";
-
     @Test
     public void testMySQLDates() {
         final String[] expected = {"DATE('2001-01-01')"};
 
-        DbProduct dbProduct = DbProduct.getDbProduct(DB_NAME_MYSQL);
+        DbProduct dbProduct = DbProduct.MYSQL;
 
         for (int i = 0; i < DATES.length; i++) {
             assertEquals(expected[i], dbProduct.wrapDate(String.valueOf(DATES[i])));
         }
+    }
+
+    @Test
+    public void testOracleWrapTimestampWithTZ() {
+        String[] timestampsTZ = {
+                "1985-05-11 15:10:00.12+03",
+                "1985-05-12 15:10:00.123+05:30",
+                "1985-05-13 15:10:00.1234+3",
+                "1985-05-14 15:10:00-04:45",
+
+        };
+        final String[] expected = {
+                "to_timestamp_tz('1985-05-11 15:10:00.12+03', 'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM')",
+                "to_timestamp_tz('1985-05-12 15:10:00.123+05:30', 'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM')",
+                "to_timestamp_tz('1985-05-13 15:10:00.1234+3', 'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM')",
+                "to_timestamp_tz('1985-05-14 15:10:00-04:45', 'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM')",
+        };
+        DbProduct dbProduct = DbProduct.ORACLE;
+        for (int i = 0; i < DATES.length; i++) {
+            assertEquals(expected[i], dbProduct.wrapTimestampWithTZ(timestampsTZ[i]));
+        }
+    }
+
+    @Test
+    public void testMicrosoftWrapTimestampWithTZ() {
+        String[] timestampsTZ = {
+                "1985-05-11 15:10:00.12+03",
+                "1985-05-12 15:11:00.123+05:30",
+                "1985-05-13 15:12:00.1234+3",
+                "1985-05-14 15:13:00-04:45",
+                "1985-05-15 15:14:00-04",
+
+        };
+        final String[] expected = {
+                "CONVERT(DATETIMEOFFSET, '1985-05-11T15:10:00.120+03:00')",
+                "CONVERT(DATETIMEOFFSET, '1985-05-12T15:11:00.123+05:30')",
+                "CONVERT(DATETIMEOFFSET, '1985-05-13T15:12:00.1234+03:00')",
+                "CONVERT(DATETIMEOFFSET, '1985-05-14 15:13:00.000-04:45')",
+                "CONVERT(DATETIMEOFFSET, '1985-05-15 15:14:00.000-04:00')"
+        };
+        DbProduct dbProduct = DbProduct.MICROSOFT;
+        for (int i = 0; i < DATES.length; i++) {
+            assertEquals(expected[i], dbProduct.wrapTimestampWithTZ(timestampsTZ[i]));
+        }
+    }
+
+    @Test
+    public void testPostgresWrapTimestampWithTZ() {
+        String[] timestampsTZ = {
+                "1985-05-11 15:10:00.12+03",
+                "1985-05-12 15:10:00.123+05:30",
+                "1985-05-13 15:10:00.1234+3",
+                "1985-05-14 15:10:00-04:45",
+
+        };
+        final String[] expected = {
+                "'1985-05-11 15:10:00.12+03'",
+                "'1985-05-12 15:10:00.123+05:30'",
+                "1985-05-13 15:10:00.1234+3'",
+                "'1985-05-14 15:10:00-04:45'",
+        };
+        DbProduct dbProduct = DbProduct.POSTGRES;
+        for (int i = 0; i < DATES.length; i++) {
+            assertEquals(expected[i], dbProduct.wrapTimestampWithTZ(timestampsTZ[i]));
+        }
+    }
+
+    @Test
+    public void testUnknownWrapTimestampWithTZ() {
+        DbProduct dbProduct = DbProduct.OTHER;
+        Exception e = assertThrows(UnsupportedOperationException.class, () ->  dbProduct.wrapTimestampWithTZ("1985-05-11 15:10:00.12+03"));
+        assertEquals("The database doesn't support pushdown of the `TIMESTAMP WITH TIME ZONE` data type", e.getMessage());
     }
 }

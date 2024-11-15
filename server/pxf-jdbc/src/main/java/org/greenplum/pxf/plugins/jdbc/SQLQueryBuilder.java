@@ -77,7 +77,8 @@ public class SQLQueryBuilder {
                 DataType.VARCHAR,
                 DataType.BPCHAR,
                 DataType.DATE,
-                DataType.TIMESTAMP
+                DataType.TIMESTAMP,
+                DataType.TIMESTAMP_WITH_TIME_ZONE
             );
     private static final TreeVisitor PRUNER = new SupportedOperatorPruner(SUPPORTED_OPERATORS);
     private static final TreeTraverser TRAVERSER = new TreeTraverser();
@@ -122,7 +123,8 @@ public class SQLQueryBuilder {
         }
         databaseMetaData = metaData;
 
-        dbProduct = DbProduct.getDbProduct(databaseMetaData.getDatabaseProductName());
+        dbProduct = DbProduct.getDbProduct(databaseMetaData.getDatabaseProductName(),
+                JdbcBasePlugin.treatUnknownDbmsAsPostgreSql(context));
         columns = context.getTupleDescription();
 
         // pick the source as either requested table name or a wrapped subquery with an alias
@@ -285,7 +287,8 @@ public class SQLQueryBuilder {
                 dbProduct,
                 quoteString,
                 context.getTupleDescription(),
-                wrapDateWithTime);
+                wrapDateWithTime,
+                JdbcBasePlugin.getIsDateWideRange(context));
     }
 
     /**

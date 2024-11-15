@@ -172,7 +172,7 @@ public class JdbcResolver extends JdbcBasePlugin implements Resolver {
                         value = offsetDateTime != null ? offsetDateTime.format(OFFSET_DATE_TIME_FORMATTER) : null;
                     } else {
                         throw new UnsupportedOperationException(
-                                String.format("Field type '%s' (column '%s') is not supported",
+                                String.format("Field type '%s' (column '%s') is not supported. Try to use the property DATE_WIDE_RANGE=true",
                                         DataType.get(oneField.type),
                                         column));
                     }

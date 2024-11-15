@@ -220,7 +220,7 @@ public class JdbcAccessor extends JdbcBasePlugin implements Accessor, Cancelable
             }
         }
         // Get database product name
-        DbProduct dbProduct = DbProduct.getDbProduct(connection.getMetaData().getDatabaseProductName());
+        DbProduct dbProduct = DbProduct.getDbProduct(connection.getMetaData().getDatabaseProductName(), treatUnknownDbmsAsPostgreSql);
 
         writer = JdbcWriter.fromProps(
                 JdbcWriterProperties.builder()

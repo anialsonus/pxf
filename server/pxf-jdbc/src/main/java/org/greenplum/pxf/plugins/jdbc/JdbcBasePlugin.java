@@ -102,6 +102,7 @@ public class JdbcBasePlugin extends BasePlugin implements Reloader {
     private static final String MYSQL_DRIVER_PREFIX = "com.mysql.";
     private static final String JDBC_DATE_WIDE_RANGE = "jdbc.date.wideRange";
     private static final String JDBC_DATE_WIDE_RANGE_LEGACY = "jdbc.date.wide-range";
+    private static final String JDBC_UNKNOWN_DBMS_AS_POSTGRESQL = "jdbc.unknownDbmsAsPostgreSql";
 
     private enum TransactionIsolation {
         READ_UNCOMMITTED(1),
@@ -179,6 +180,10 @@ public class JdbcBasePlugin extends BasePlugin implements Reloader {
 
     // Flag which is used when the year might contain more than 4 digits in `date` or 'timestamp'
     protected boolean isDateWideRange;
+    // Flag which is used when the external database will use PostgreSql syntaxes to wrap date, timestamp and timestamp with time zone
+    // while using pushdown filter.
+    protected boolean treatUnknownDbmsAsPostgreSql;
+
 
     static {
         // Deprecated as of Oct 22, 2019 in version 5.9.2+
@@ -402,6 +407,8 @@ public class JdbcBasePlugin extends BasePlugin implements Reloader {
         }
 
         isDateWideRange = getIsDateWideRange(context);
+
+        treatUnknownDbmsAsPostgreSql = treatUnknownDbmsAsPostgreSql(context);
     }
 
     /**
@@ -430,6 +437,19 @@ public class JdbcBasePlugin extends BasePlugin implements Reloader {
             }
         }
         return configuration != null && configuration.getBoolean(JDBC_DATE_WIDE_RANGE, false);
+    }
+
+    /**
+     * Determine if the external database will use PostgreSql syntaxes to wrap date, timestamp and timestamp with time zone
+     * while using pushdown filter.
+     * Optional parameter. The default value is 'true' for backward compatability.
+     *
+     * @param context       request context
+     * @return false if we don't want to use PostgreSql syntaxes to form pushdown filter.
+     */
+    public static boolean treatUnknownDbmsAsPostgreSql(RequestContext context) {
+        Configuration configuration = context.getConfiguration();
+        return configuration != null && configuration.getBoolean(JDBC_UNKNOWN_DBMS_AS_POSTGRESQL, true);
     }
 
     /**
@@ -627,7 +647,7 @@ public class JdbcBasePlugin extends BasePlugin implements Reloader {
 
         // Prepare session (process sessionConfiguration)
         if (!sessionConfiguration.isEmpty()) {
-            DbProduct dbProduct = DbProduct.getDbProduct(metadata.getDatabaseProductName());
+            DbProduct dbProduct = DbProduct.getDbProduct(metadata.getDatabaseProductName(), treatUnknownDbmsAsPostgreSql);
 
             try (Statement statement = connection.createStatement()) {
                 for (Map.Entry<String, String> e : sessionConfiguration.entrySet()) {

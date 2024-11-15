@@ -26,10 +26,12 @@ import org.slf4j.LoggerFactory;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 
 import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
 import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+import static org.greenplum.pxf.plugins.jdbc.utils.DateTimeEraFormatters.OFFSET_DATE_TIME_WITH_TIME_ZONE_FORMATTER;
 
 /**
  * A tool class to change PXF-JDBC plugin behaviour for certain external databases
@@ -39,6 +41,24 @@ public enum DbProduct {
         @Override
         public String buildSessionQuery(String key, String value) {
             return String.format("SET %s %s", key, value);
+        }
+
+        /**
+         * Convert Postgres timestamp with time zone string to the appropriate Microsoft SQL Server DATETIMEOFFSET string format.
+         * The Microsoft SQL Server DATETIMEOFFSET type supports only the `+|-hh:mm` format or the literal `Z` for time zones.
+         * Greenplum may send a timestamp with a time zone that contains only hours, for example, +03.
+         * We use the OffsetDateTime#toString method to convert time zones without minutes to those with minutes or to Z.
+         * In case of a parsing error, we will avoid pushdown and send the query without the WHERE clause.
+         */
+        @Override
+        public String wrapTimestampWithTZ(String val) {
+            try {
+                String valStr = OffsetDateTime.parse(val, OFFSET_DATE_TIME_WITH_TIME_ZONE_FORMATTER).toString();
+                return "CONVERT(DATETIMEOFFSET, '" + valStr + "')";
+            } catch (Exception e) {
+                throw new IllegalArgumentException(
+                        String.format("The value '%s' cannot be converted to the Microsoft SQL Server 'DATETIMEOFFSET' type", val));
+            }
         }
     },
 
@@ -70,6 +90,14 @@ public enum DbProduct {
             return "to_timestamp('" + val + "', 'YYYY-MM-DD HH24:MI:SS.FF')";
         }
 
+        /**
+         * Convert Postgres timestamp with time zone string to the appropriate Oracle timestamp with time zone string format.
+         */
+        @Override
+        public String wrapTimestampWithTZ(String val) {
+            return "to_timestamp_tz('" + val + "', 'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM')";
+        }
+
         @Override
         public String buildSessionQuery(String key, String value) {
             return OracleJdbcUtils.buildSessionQuery(key, value);
@@ -90,6 +118,11 @@ public enum DbProduct {
         @Override
         public String wrapTimestamp(@NonNull LocalDateTime val, boolean isDateWideRange) {
             return wrapTimestamp(isDateWideRange ? val.format(DateTimeEraFormatters.LOCAL_DATE_TIME_FORMATTER) : val.toString());
+        }
+
+        @Override
+        public String wrapTimestampWithTZ(String val) {
+            return "'" + val + "'";
         }
     },
 
@@ -115,7 +148,15 @@ public enum DbProduct {
         public String buildSessionQuery(String key, String value) {
             return String.format("SET %s %s", key, value);
         }
-    };
+
+        @Override
+        public String wrapTimestampWithTZ(String val) {
+            throw new UnsupportedOperationException(
+                    String.format("The database %s doesn't support the TIMESTAMP WITH TIME ZONE data type", this));
+        }
+    },
+
+    OTHER;
 
     /**
      * Wraps a given date value the way required by target database
@@ -160,11 +201,21 @@ public enum DbProduct {
     }
 
     /**
+     * Wraps a given timestamp with time zone value the way required by target database
+     *
+     * @param val {@link java.sql.Types.TIME_WITH_TIMEZONE} object to wrap
+     * @return a string with a properly wrapped timestamp object
+     */
+    public String wrapTimestampWithTZ(String val) {
+        throw new UnsupportedOperationException("The database doesn't support pushdown of the `TIMESTAMP WITH TIME ZONE` data type");
+    }
+
+    /**
      * Wraps a given timestamp value the way required by target database
      *
-     * @param val {@link java.sql.Timestamp} object to wrap
-     * @return a string with a properly wrapped timestamp object
+     * @param val             {@link java.sql.Timestamp} object to wrap
      * @param isDateWideRange flag which is used when the year might contain more than 4 digits
+     * @return a string with a properly wrapped timestamp object
      */
     public String wrapTimestamp(@NonNull LocalDateTime val, boolean isDateWideRange) {
         return wrapTimestamp(isDateWideRange ? val.format(ISO_LOCAL_DATE_TIME) :
@@ -188,7 +239,7 @@ public enum DbProduct {
      * @param dbName database name
      * @return a DbProduct of the required class
      */
-    public static DbProduct getDbProduct(String dbName) {
+    public static DbProduct getDbProduct(String dbName, boolean treatUnknownDbmsAsPostgreSql) {
         if (LOG.isDebugEnabled()) {
             LOG.debug("Database product name is '{}'", dbName);
         }
@@ -205,8 +256,14 @@ public enum DbProduct {
             result = DbProduct.S3_SELECT;
         } else if (dbName.contains("ADAPTIVE SERVER ENTERPRISE")) {
             result = DbProduct.SYBASE;
-        } else {
+        } else if (dbName.contains("POSTGRESQL")) {
             result = DbProduct.POSTGRES;
+        } else {
+            if (treatUnknownDbmsAsPostgreSql) {
+                result = DbProduct.POSTGRES;
+            } else {
+                result = DbProduct.OTHER;
+            }
         }
 
         if (LOG.isDebugEnabled()) {
