@@ -45,6 +45,7 @@ under the License.
             <mapping option="query_timeout" property="jdbc.statement.queryTimeout"/>
             <mapping option="batch_timeout" property="jdbc.statement.batchTimeout"/>
             <mapping option="date_wide_range" property="jdbc.date.wideRange"/>
+            <mapping option="unknown_dbms_as_postgresql" property="jdbc.unknownDbmsAsPostgreSql"/>
         </optionMappings>
     </profile>
 

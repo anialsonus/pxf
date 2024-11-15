@@ -67,12 +67,6 @@ public enum DbProduct {
         public String wrapDate(String val) {
             return "DATE('" + val + "')";
         }
-
-        @Override
-        public String wrapTimestampWithTZ(String val) {
-            throw new UnsupportedOperationException(
-                    String.format("The database %s doesn't support the TIMESTAMP WITH TIME ZONE data type", this));
-        }
     },
 
     ORACLE {
@@ -125,6 +119,11 @@ public enum DbProduct {
         public String wrapTimestamp(@NonNull LocalDateTime val, boolean isDateWideRange) {
             return wrapTimestamp(isDateWideRange ? val.format(DateTimeEraFormatters.LOCAL_DATE_TIME_FORMATTER) : val.toString());
         }
+
+        @Override
+        public String wrapTimestampWithTZ(String val) {
+            return "'" + val + "'";
+        }
     },
 
     S3_SELECT {
@@ -142,12 +141,6 @@ public enum DbProduct {
         public String wrapTimestamp(String val) {
             return "TO_TIMESTAMP('" + val + "')";
         }
-
-        @Override
-        public String wrapTimestampWithTZ(String val) {
-            throw new UnsupportedOperationException(
-                    String.format("The database %s doesn't support the TIMESTAMP WITH TIME ZONE data type", this));
-        }
     },
 
     SYBASE {
@@ -161,7 +154,9 @@ public enum DbProduct {
             throw new UnsupportedOperationException(
                     String.format("The database %s doesn't support the TIMESTAMP WITH TIME ZONE data type", this));
         }
-    };
+    },
+
+    OTHER;
 
     /**
      * Wraps a given date value the way required by target database
@@ -212,7 +207,7 @@ public enum DbProduct {
      * @return a string with a properly wrapped timestamp object
      */
     public String wrapTimestampWithTZ(String val) {
-        return "'" + val + "'";
+        throw new UnsupportedOperationException("The database doesn't support pushdown of the `TIMESTAMP WITH TIME ZONE` data type");
     }
 
     /**
@@ -244,7 +239,7 @@ public enum DbProduct {
      * @param dbName database name
      * @return a DbProduct of the required class
      */
-    public static DbProduct getDbProduct(String dbName) {
+    public static DbProduct getDbProduct(String dbName, boolean treatUnknownDbmsAsPostgreSql) {
         if (LOG.isDebugEnabled()) {
             LOG.debug("Database product name is '{}'", dbName);
         }
@@ -261,8 +256,14 @@ public enum DbProduct {
             result = DbProduct.S3_SELECT;
         } else if (dbName.contains("ADAPTIVE SERVER ENTERPRISE")) {
             result = DbProduct.SYBASE;
-        } else {
+        } else if (dbName.contains("POSTGRESQL")) {
             result = DbProduct.POSTGRES;
+        } else {
+            if (treatUnknownDbmsAsPostgreSql) {
+                result = DbProduct.POSTGRES;
+            } else {
+                result = DbProduct.OTHER;
+            }
         }
 
         if (LOG.isDebugEnabled()) {

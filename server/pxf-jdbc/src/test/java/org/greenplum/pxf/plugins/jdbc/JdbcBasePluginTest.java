@@ -39,10 +39,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.anyInt;
@@ -524,6 +521,23 @@ public class JdbcBasePluginTest {
         configuration.set("jdbc.statement.batchTimeout", String.valueOf(batchTimeout));
         assertThrows(IllegalArgumentException.class,
                 () -> getPlugin(mockConnectionManager, mockSecureLogin, context));
+    }
+
+    @Test
+    public void testUnknownDbmsAsPostgreSqlFromConfiguration() {
+        configuration.set("jdbc.driver", "org.greenplum.pxf.plugins.jdbc.FakeJdbcDriver");
+        configuration.set("jdbc.url", "test-url");
+        configuration.set("jdbc.unknownDbmsAsPostgreSql", "false");
+        JdbcBasePlugin plugin = getPlugin(mockConnectionManager, mockSecureLogin, context);
+        assertFalse(plugin.treatUnknownDbmsAsPostgreSql);
+    }
+
+    @Test
+    public void testUnknownDbmsAsPostgreSqlDefaultValueFromConfiguration() {
+        configuration.set("jdbc.driver", "org.greenplum.pxf.plugins.jdbc.FakeJdbcDriver");
+        configuration.set("jdbc.url", "test-url");
+        JdbcBasePlugin plugin = getPlugin(mockConnectionManager, mockSecureLogin, context);
+        assertTrue(plugin.treatUnknownDbmsAsPostgreSql);
     }
 
     private JdbcBasePlugin getPlugin(ConnectionManager mockConnectionManager, SecureLogin mockSecureLogin, RequestContext context) {

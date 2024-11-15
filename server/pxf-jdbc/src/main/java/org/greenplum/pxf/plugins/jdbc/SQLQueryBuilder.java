@@ -123,7 +123,8 @@ public class SQLQueryBuilder {
         }
         databaseMetaData = metaData;
 
-        dbProduct = DbProduct.getDbProduct(databaseMetaData.getDatabaseProductName());
+        dbProduct = DbProduct.getDbProduct(databaseMetaData.getDatabaseProductName(),
+                JdbcBasePlugin.treatUnknownDbmsAsPostgreSql(context));
         columns = context.getTupleDescription();
 
         // pick the source as either requested table name or a wrapped subquery with an alias
